@@ -1,33 +1,33 @@
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-
-const StudentDetailsSchema = new mongoose.Schema(
-  {
-    fname: {
-      type: String, // Assuming fName is a string, change the type accordingly
-    },
-    lname: {
-        type: String, // Assuming fName is a string, change the type accordingly
-
-    },
-    address: {
-      type: String,
-    },
-    classOf: {
-      type: String,
-    },
-    branch: {
-      type: String,
-    },
-    studentId: {
-      type: String,
-    },
-    action: {
-      type: String, // Assuming action is a string, change the type accordingly
-    },
+const StudentDetailsSchema = new Schema({
+  Lname: {
+    type: String,
   },
-  { timestamps: true }
-);
+  user: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+  },
+  Fname: {
+    type: String,
+  },
+  address: {
+    type: String,
+  },
+  classOf: {
+    type: String,
+  },
+  branch: {
+    type: String,
+  },
+  studentId: {
+    type: String,
+  },
+  action: {
+    type: String,
+  },
+}, { timestamps: true });
 
 const StudentDetails = mongoose.model('StudentDetails', StudentDetailsSchema);
 

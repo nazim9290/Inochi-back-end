@@ -146,22 +146,55 @@ exports.getTopCaruselImage = async (req, res) => {
 // team:
 
 exports.createTeam = async (req, res) => {
+    const { designation, name, public_id, } = req.body;
     try {
-        const { name } = req.body;
-        const imageBuffer = req.file.buffer;
-
-        // Create a new team instance
+        // Create a new blog and associate it with the authenticated user
         const newTeam = new Team({
             name,
-            image: imageBuffer,
+            designation,
+            author: req.user._id,
         });
-
-        // Save the new team to the database
+        newTeam.image = {
+            url: `data:image/png;base64,${public_id}`,
+            public_id,
+        };
         await newTeam.save();
 
-        return res.status(201).json({ message: 'Team created successfully', team: newTeam });
+        // Use populate to fetch details of the author and attach them to the blog
+        const populatedTeam = await newTeam.populate('author', 'name email image')
+
+        res.status(201).json({ message: 'Team Member created successfully', team:populatedTeam  });
     } catch (error) {
-        console.error('Error creating team:', error);
-        return res.status(500).json({ error: 'Internal Server Error' });
+        console.error('Error creating blog:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+// 
+exports.allTeam = async (req, res) => {
+    try {
+        // Find all blogs with status 'draft'
+        const team = await Team.find()
+            .populate('author', 'name email'); // Populate the 'author' field with user details
+        res.status(200).json({ team });
+    } catch (error) {
+        console.error('Error getting All  Team Member:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+exports.deleteSingeteam = async (req, res) => {
+    const teamId = req.params._id; // Assuming team ID is passed as a route parameter
+console.log(teamId)
+    try {
+        // Find the team member by ID and remove it
+        const deletedTeam = await Team.findOneAndDelete({ _id: teamId });
+
+        if (!deletedTeam) {
+            return res.status(404).json({ error: 'Team member not found' });
+        }
+
+        res.status(200).json({ message: 'Team member deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting team member:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 };

@@ -1,7 +1,8 @@
-const User =require("../models/userModel")
-const { hashPassword, comparePassword}=require("../helper/auth")
-const  jwt =require( "jsonwebtoken")
-const StudentDetails=require("../models/StudentDetailModel")
+const User = require("../models/userModel")
+const { hashPassword, comparePassword } = require("../helper/auth")
+const jwt = require("jsonwebtoken")
+const StudentDetails = require("../models/StudentDetailModel")
+const mongoose = require('mongoose');
 
 exports.register = async (req, res) => {
   //  console.log("REGISTER ENDPOINT => ", req.body);
@@ -17,7 +18,7 @@ exports.register = async (req, res) => {
       error: "Password is required and should be 6 characters long",
     });
   }
- 
+
   const exist = await User.findOne({ phone });
   if (exist) {
     return res.json({
@@ -26,7 +27,7 @@ exports.register = async (req, res) => {
   }
   // id
   const randomInteger = Math.floor(Math.random() * 10);
-// console.log(randomInteger);
+  // console.log(randomInteger);
   // hash password
   const hashedPassword = await hashPassword(password);
 
@@ -34,7 +35,7 @@ exports.register = async (req, res) => {
     name,
     email,
     password: hashedPassword,
-    phone:phone,
+    phone: phone,
   });
   try {
     await user.save();
@@ -81,7 +82,9 @@ exports.login = async (req, res) => {
   }
 };
 
+
 exports.currentUser = async (req, res) => {
+  // console.log("test ")
   try {
     const user = await User.findById(req.user._id);
     // res.json(user);
@@ -91,12 +94,14 @@ exports.currentUser = async (req, res) => {
     res.sendStatus(400);
   }
 };
-// 
-// POST route to create student details for a user
+
+
 exports.createStudentdetails = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const {
-      user_id,
       fName,
       lname,
       address,
@@ -106,17 +111,17 @@ exports.createStudentdetails = async (req, res) => {
       action,
     } = req.body;
 
-    // Check if the user exists
-    const user = await User.findById(user_id);
+    const user_id = req.params.id;
+    const user = await User.findById(user_id).session(session);
     if (!user) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ error: 'User not found' });
     }
-
-    // Create student details
     const studentDetails = new StudentDetails({
       postedBy: user_id,
       fName,
-      lname,
+      lName,
       address,
       classOf,
       branch,
@@ -125,22 +130,31 @@ exports.createStudentdetails = async (req, res) => {
     });
 
     // Save the student details
-    await studentDetails.save();
+    await studentDetails.save({ session });
 
-    // Optionally, you can update the user's details as well
-    user.fname = fName;
-    user.lname = lname;
+    // Optionally, update the user's details
+    user.Fname = fName;
+    user.Lname = lname;
     user.address = address;
     user.classOf = classOf;
     user.branch = branch;
     user.studentId = studentId;
     user.action = action;
+
     // Update the userDetails field in the User model
     user.userDetails.push(studentDetails._id);
-    await user.save();
+    await user.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
     res.status(201).json({ message: 'Student details created successfully' });
   } catch (error) {
     console.error('Error creating student details:', error);
+
+    await session.abortTransaction();
+    session.endSession();
+
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -148,10 +162,13 @@ exports.createStudentdetails = async (req, res) => {
 // GET route to fetch all student details
 exports.getAllStudents = async (req, res) => {
   try {
-    const allUsersWithStudentDetails = await User.find().populate('userDetails');
-    res.json({ users: allUsersWithStudentDetails });
+    const allUsersWithStudentDetails = await User.find().populate('userDetails', 'name address class branch studentId accountType');
+    const users = allUsersWithStudentDetails.map(user => user.userDetails);
+
+    res.json({ users });
   } catch (error) {
     console.error('Error fetching all users with student details:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+// 

@@ -11,6 +11,6 @@ const {register,login,currentUser, createStudentdetails, getAllStudents,}=requir
 router.post("/register",register);
 router.post("/login",login);
 router.get('/profile', requireAuth, currentUser);
-router.post("/create-student",requireAuth,checkAdmin,createStudentdetails);
+router.post("/create-student/:id",requireAuth,checkAdmin,createStudentdetails);
 router.get("/all-student",getAllStudents)
 module.exports = router;

@@ -2,14 +2,14 @@
 
 const { requireAuth } = require("../midleware/auth")
 const { checkAdmin } = require("../midleware/admin");
-
+const upload = require("../controlar/fsrea")
 const express = require("express")
 const router = express.Router();
 // controllers
 const { createBlog, allPublishedBlog,
-     deleteBlogById,
-      allPendingBlog,
-       singleBlog,
+        deleteBlogById,
+        allPendingBlog,
+        singleBlog,
         singleBlogconvert,
         getCaruselDraft,
         deleteCaruselDraft,
@@ -26,11 +26,21 @@ router.put('/publised-single-blog/:id', requireAuth, checkAdmin, singleBlogconve
 router.post("/create-carusel", requireAuth, CreateCarusel)
 // public route :
 router.get('/published-blogs', allPublishedBlog);
-router.get("/draft-carusel",getCaruselDraft);
-router.delete("/delete-carusel/:id",requireAuth,deleteCaruselDraft);
-router.put("/aproved-carusel/:id",aprovedCarusel);
+router.get("/draft-carusel", getCaruselDraft);
+router.delete("/delete-carusel/:id", requireAuth, deleteCaruselDraft);
+router.put("/aproved-carusel/:id", aprovedCarusel);
 // ...
 router.get("/published-carusels", getCarusel);
 // ...
+// uploader 
+router.post("/files", upload.single("avatar"), (req, res, next) => {
+        try {
+                
+                console.log(req.file);
+                res.send("file uplad success")
 
+        } catch (err) {
+                next();
+        }
+})
 module.exports = router;
