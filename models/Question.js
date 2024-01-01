@@ -9,36 +9,36 @@ const PostQuestionSchema = new mongoose.Schema({
     },
     first:{
             type: String,
-            //    required: true,
+               required: true,
                trim: true
         },
     second:{
                type: String,
-            //    required: true,
+               required: true,
                trim: true
            },
     third:{
                type: String,
-            //    required: true,
+               required: true,
                trim: true
            },
-    fourth:{
-               type: String,
-                // required: true,
-                trim: true
-           },
+  
            answer:{
                 type: String,
-                // required: true,
+                required: true,
                 trim: true
            },
            category:{
                 type: String,
+                required: true,
+
            },
            incorrect_answer:[
                         {
                           
-                            type: String
+                            type: String,
+                            required: true,
+
                        },
            ],
         postedBy: {

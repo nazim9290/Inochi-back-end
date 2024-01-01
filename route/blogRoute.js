@@ -2,7 +2,6 @@
 
 const { requireAuth } = require("../midleware/auth")
 const { checkAdmin } = require("../midleware/admin");
-const upload = require("../controlar/fsrea")
 const express = require("express")
 const router = express.Router();
 // controllers
@@ -33,14 +32,5 @@ router.put("/aproved-carusel/:id", aprovedCarusel);
 router.get("/published-carusels", getCarusel);
 // ...
 // uploader 
-router.post("/files", upload.single("avatar"), (req, res, next) => {
-        try {
-                
-                console.log(req.file);
-                res.send("file uplad success")
 
-        } catch (err) {
-                next();
-        }
-})
 module.exports = router;

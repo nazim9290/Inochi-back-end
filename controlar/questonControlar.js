@@ -1,24 +1,41 @@
 const Question = require("../models/Question");
 
 exports.createQuestion = async (req, res) => {
+  const { questionName, first, second, third, answer, category } = req.body;
+  if (!category) {
+    return res.status(400).json({
+      error: "Category Must Need"
+    })
+  }
+  // Check if any required fields are blank
+  if (!questionName || !first || !second || !third || !answer) {
+    return res.status(400).json({
+      error: "All fields are required. Please fill in all the fields.",
+    });
+  }
 
-  const { questionName, first, second, third, answer } = req.body;
   try {
     const question = await Question({
       answer: answer,
       questionName: questionName,
       incorrect_answer: [first, second, third],
+      category: category
     });
-    question.save();
-    res.json(question);
-    // console.log(question);
-    return res.json({
+
+    // question.save();
+
+    return res.status(201).json({
       ok: true,
+      question,
     });
   } catch (err) {
-    // console.log(err);
+    console.log(err);
+    return res.status(500).json({
+      error: "Internal Server Error",
+    });
   }
 };
+
 
 
 exports.getAllQuestions = async (req, res) => {
@@ -26,20 +43,99 @@ exports.getAllQuestions = async (req, res) => {
   res.json(questions);
   // console.log(questions)
 };
+// 
+exports.getQuestionByVocabulary = async (req, res) => {
+  try {
+    const questions = await Question.find({ category: "Vocabulary" })
+      .sort({ createdAt: -1 }).limit(20);
+    res.json(questions);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({
+      error: "Internal Server Error",
+    });
+  }
+}
+// 
+exports.getQuestionByGrammer = async (req, res) => {
+  try {
+    const questions = await Question.find({ category: "Grammer" })
+      .sort({ createdAt: -1 }).limit(20);
+    res.json(questions);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({
+      error: "Internal Server Error",
+    });
+  }
+}
+// 
 
+exports.getQuestionByReading = async (req, res) => {
+  try {
+    const questions = await Question.find({ category: "Reading" })
+      .sort({ createdAt: -1 }).limit(20);
+    res.json(questions);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({
+      error: "Internal Server Error",
+    });
+  }
+}
+// 
+exports.getQuestionByKanji = async (req, res) => {
+  try {
+    const questions = await Question.find({ category: "Kanji" })
+      .sort({ createdAt: -1 }).limit(20);
+    res.json(questions);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({
+      error: "Internal Server Error",
+    });
+  }
+}
+// 
+exports.getQuestionByFullOne = async (req, res) => {
+  try {
+    const questions = await Question.find({ category: "FullOne" })
+      .sort({ createdAt: -1 }).limit(20);
+    res.json(questions);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({
+      error: "Internal Server Error",
+    });
+  }
+}
+// 
+exports.getQuestionByFullTwo = async (req, res) => {
+  try {
+    const questions = await Question.find({ category: "FullTwo" })
+      .sort({ createdAt: -1 }).limit(20);
+    res.json(questions);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({
+      error: "Internal Server Error",
+    });
+  }
+}
+// 
 
 exports.updateQuestion = async (req, res) => {
-  const { questionName, first, second, third, fourth ,answer} = req.body;
+  const { questionName, first, second, third, fourth, answer } = req.body;
   const { _id } = req.params;
   // console.log(_id)
   try {
     const question = await Question.findByIdAndUpdate(
-     _id,
+      _id,
       {
         answer: answer,
         questionName: questionName,
         incorrect_answer: [first, second, third],
-      
+
       },
       {
         new: true,
