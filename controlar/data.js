@@ -2,7 +2,7 @@ const Rpage = require('../models/pageData');
 const ImageTopCarousel = require('../models/imageTopCarousel');
 const Team = require("../models/Team.js");
 const ContacPage=require("../models/ContacPageModel.js")
-
+const Review =require("../models/Review.js")
 
 exports.contacpageCreate=async(req,res)=>{
    try{
@@ -198,3 +198,36 @@ console.log(teamId)
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+exports.ReviewCreate=async(req,res)=>{
+    const _id=req.user._id;
+    const {review}=req.body;
+if(! review.lenght){
+    return res.json({
+        error:" review required"
+    })
+}
+    try{
+        console.log(_id,review)
+   const reviews =new Review({
+    review,
+    postedby:_id
+   });
+   review.save();
+   res.json(reviews)
+
+    }catch(error){
+        console.error('Error please verify your image :', error);
+        res.status(400).json({ error: ' Server Error' });
+    }
+    
+}
+exports.Review=async(req,res)=>{
+    try{
+const review=await Review.find().populate("postedby","name email_id");
+res.json(review)
+
+    }catch(err){
+        res.status(400).json({ error: ' Server Error' });
+ 
+    }
+}
