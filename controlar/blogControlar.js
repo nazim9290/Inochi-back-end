@@ -65,6 +65,30 @@ exports.singleBlog = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+exports.singlgleBlogTags=async (req, res) => {
+    const blogId = req.params.id;
+  const { tags, status } = req.body;
+
+  try {
+    // Update the blog with the selected tags and status
+    const updatedBlog = await Blog.findByIdAndUpdate(
+      blogId,
+      { tags, status },
+      { new: true }
+    );
+
+    if (!updatedBlog) {
+      return res.status(404).json({ success: false, message: 'Blog not found' });
+    }
+
+    // Send a success response with the updated blog
+    res.json({ success: true, message: 'Blog approved successfully', blog: updatedBlog });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
 
 exports.deleteBlogById = async (req, res) => {
     const { id } = req.params;
@@ -95,7 +119,44 @@ exports.allPublishedBlog = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+exports.allPublishedBlogService = async (req, res) => {
+    try {
 
+        const publishedstudy = await Blog.find({ 'tags.service': true, status: 'published' })
+        .populate('author', 'name email');
+        res.status(200).json({ publishedstudy });
+
+    } catch (error) {
+        console.error('Error getting published blogs:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.allPublishedBlogBlogs = async (req, res) => {
+    try {
+
+        const publishedstudy = await Blog.find({ 'tags.blogs': true, status: 'published' })
+        .populate('author', 'name email');
+        res.status(200).json({ publishedstudy });
+
+    } catch (error) {
+        console.error('Error getting published blogs:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.allPublishedBlogstudy = async (req, res) => {
+    try {
+
+        const publishedstudy = await Blog.find({ 'tags.study': true, status: 'published' })
+        .populate('author', 'name email');
+        res.status(200).json({ publishedstudy });
+
+    } catch (error) {
+        console.error('Error getting published blogs:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
 
 exports.singleBlogconvert = async (req, res) => {
     // this is convert single post  status draft mode to publish mode 

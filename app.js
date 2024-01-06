@@ -25,13 +25,22 @@ const app = express();
 const port = 5000;
 
 const corsOptions = {
-  origin: '*', // replace with your frontend URL
+  origin: "*", 
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true, // enable set cookie
+  optionsSuccessStatus: 204,
+  allowedHeaders: 'Content-Type, Authorization', // specify allowed headers
+  exposedHeaders: 'Content-Disposition', // specify headers exposed to the client
+};
+
+const corsOptionsadmin = {
+  origin: 'http://localhost:3000/', // replace with your frontend URL
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true, // enable set cookie
   optionsSuccessStatus: 204,
 };
-
 app.use(cors(corsOptions));
+app.use(cors(corsOptionsadmin));
 
 app.get('/',async(req,res)=>{
   // console.log("every thing ok");

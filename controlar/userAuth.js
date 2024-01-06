@@ -172,3 +172,53 @@ exports.getAllStudents = async (req, res) => {
   }
 };
 // 
+
+// Route for updating user profile
+
+exports.upDateProfile = async (req, res) => {
+  const {
+    name,
+    email,
+    phone,
+    father,
+    mother,
+    paddress,
+    parent,
+    education,
+    public_id
+  } = req.body;
+  const userId = req.user._id; // Assuming you have authentication middleware that sets req.user
+
+  try {
+    // Find the user by ID
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Update the user's profile information
+    user.name = name;
+    user.email = email;
+    user.phone = phone;
+    user.father = father;
+    user.mother = mother;
+    user.paddress = paddress;
+    user.parent = parent;
+    user.education = education;
+    user.image = {
+            url: `data:image/png;base64,${public_id}`,
+            public_id,
+        };
+    // Save the updated user document
+    await user.save();
+
+    // Send a response indicating success
+    res.json({ message: 'Profile updated successfully', user: user });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+}
+
+

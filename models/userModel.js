@@ -24,6 +24,30 @@ const userSchema = new Schema(
       required: true,
       unique: true,
 
+    }, father: {
+      type: String,
+    },
+    mother: {
+      type: String,
+    },
+    paddress: {
+      type: String,
+    },
+    parent: {
+      type: String,
+    },
+    education: {
+      type: String,
+    },
+    id: {
+      type: String,
+    },
+    image: {
+    url: String,
+    public_id: String,
+  },
+    imagePublicId: {
+      type: String,
     },
    
     role: {

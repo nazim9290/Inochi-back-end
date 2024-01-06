@@ -28,6 +28,20 @@ const blogSchema = new mongoose.Schema({
     enum: ['draft', 'published'], 
     default: 'draft', // Default value is 'draft'
   },
+  tags: {
+    blogs: {
+      type: Boolean,
+      default: false,
+    },
+    study: {
+      type: Boolean,
+      default: false,
+    },
+    service: {
+      type: Boolean,
+      default: false,
+    },
+  },
   // Add other fields as needed
 });
 
