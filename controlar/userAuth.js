@@ -3,7 +3,12 @@ const { hashPassword, comparePassword } = require("../helper/auth")
 const jwt = require("jsonwebtoken")
 const StudentDetails = require("../models/StudentDetailModel")
 const mongoose = require('mongoose');
-
+const cloudinary=require("cloudinary")
+cloudinary.config({
+  cloud_name: "arefintalukder5",
+  api_key:"622592679337996" ,
+  api_secret: "lQqwTTsKLLgm0F3_yasknj-jefg",
+});
 exports.register = async (req, res) => {
   //  console.log("REGISTER ENDPOINT => ", req.body);
   const { name, email, password, phone } = req.body;
@@ -222,3 +227,17 @@ exports.upDateProfile = async (req, res) => {
 }
 
 
+exports.uploadImage=async(req,res)=>{
+  
+  // console.log("req files => ", req.files);
+  try {
+    const result = await cloudinary.uploader.upload(req.files.image.path);
+    // console.log("uploaded image url => ", result);
+    res.json({
+      url: result.secure_url,
+      public_id: result.public_id,
+    });
+  } catch (err) {
+    console.log(err);
+  }
+};

@@ -5,8 +5,11 @@ const {checkAdmin}=require("../midleware/admin") ;
 const {checkStudent}=require("../midleware/student.js")
 // controllers
 
-const {register,login,currentUser, createStudentdetails, getAllStudents,upDateProfile}=require("../controlar/userAuth.js");
-
+const {register,login,currentUser, createStudentdetails, getAllStudents,upDateProfile,uploadImage}=require("../controlar/userAuth.js");
+router.post(
+  "/upload-image-file",
+  uploadImage
+);
 
 router.post("/register",register);
 router.post("/login",login);
