@@ -6,14 +6,11 @@ const Review =require("../models/Review.js")
 
 exports.contacpageCreate=async(req,res)=>{
    try{
-      const {title,content,public_id}=req.body;
+      const {title,content,image}=req.body;
       const newcontacpage = new ContacPage({
         title,
         content,
-        image: {
-          url: `data:image/png;base64,${public_id}`,
-          public_id,
-        }
+        image
       });
       await newcontacpage.save();
 
@@ -146,18 +143,19 @@ exports.getTopCaruselImage = async (req, res) => {
 // team:
 
 exports.createTeam = async (req, res) => {
-    const { designation, name, public_id, } = req.body;
+    const { designation, name, image, } = req.body;
     try {
         // Create a new blog and associate it with the authenticated user
         const newTeam = new Team({
             name,
             designation,
             author: req.user._id,
+            image
         });
-        newTeam.image = {
-            url: `data:image/png;base64,${public_id}`,
-            public_id,
-        };
+        // newTeam.image = {
+        //     url: `data:image/png;base64,${public_id}`,
+        //     public_id,
+        // };
         await newTeam.save();
 
         // Use populate to fetch details of the author and attach them to the blog

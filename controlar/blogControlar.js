@@ -2,22 +2,20 @@ const express = require('express');
 const Blog = require('../models/blogModel.js');
 const CaruselModel = require("../models/CaruselModel.js")
 exports.createBlog = async (req, res) => {
-    const { title, content, public_id, category } = req.body;
+    const { title, content, image, category } = req.body;
     if (!category) {
         return res.status(400).json({ error: 'Category is required.' });
     }
     try {
         // Create a new blog and associate it with the authenticated user
         const newBlog = new Blog({
+            image,
             title,
             content,
             category,
             author: req.user._id, // Assuming the authenticated user's ID is stored in req.user
         });
-        newBlog.image = {
-            url: `data:image/png;base64,${public_id}`,
-            public_id,
-        };
+       
         await newBlog.save();
 
         // Use populate to fetch details of the author and attach them to the blog
@@ -165,7 +163,7 @@ exports.singleBlogconvert = async (req, res) => {
 exports.CreateCarusel = async (req,res) => {
     try {
 
-        const { public_id, category } = req.body;
+        const { image, category } = req.body;
         if (!category) {
             return res.status(400).json({ error: 'Category is required.' });
 
@@ -173,11 +171,12 @@ exports.CreateCarusel = async (req,res) => {
         const newCaruselModel = new CaruselModel({
             category,
             author: req.user._id,
+            image
         });
-        newCaruselModel.image = {
-            url: `data:image/png;base64,${public_id}`,
-            public_id,
-        };
+        // newCaruselModel.image = {
+        //     url: `data:image/png;base64,${public_id}`,
+        //     public_id,
+        // };
         await newCaruselModel.save();
 
         // Use populate to fetch details of the author and attach them to the blog

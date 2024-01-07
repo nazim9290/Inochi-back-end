@@ -10,8 +10,8 @@ cloudinary.config({
   api_secret: "lQqwTTsKLLgm0F3_yasknj-jefg",
 });
 exports.register = async (req, res) => {
-  //  console.log("REGISTER ENDPOINT => ", req.body);
-  const { name, email, password, phone } = req.body;
+   console.log("REGISTER ENDPOINT => ", req.body);
+  const { name,  password, phone } = req.body;
   // validation
   if (!name) {
     return res.json({
@@ -38,7 +38,6 @@ exports.register = async (req, res) => {
 
   const user = new User({
     name,
-    email,
     password: hashedPassword,
     phone: phone,
   });
@@ -57,9 +56,9 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   // console.log(req.body);
   try {
-    const { email, password } = req.body;
+    const { phone, password } = req.body;
     // check if our db has user with that email
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ phone });
     if (!user) {
       return res.json({
         error: "no user found",
@@ -190,10 +189,12 @@ exports.upDateProfile = async (req, res) => {
     paddress,
     parent,
     education,
-    public_id
+    image
   } = req.body;
-  const userId = req.user._id; // Assuming you have authentication middleware that sets req.user
-
+  const userId = req.user._id; 
+  console.log(userId)
+  // Assuming you have authentication middleware that sets req.user
+console.log(name,email,phone,father,mother,paddress,parent,education,image)
   try {
     // Find the user by ID
     const user = await User.findById(userId);
@@ -211,13 +212,10 @@ exports.upDateProfile = async (req, res) => {
     user.paddress = paddress;
     user.parent = parent;
     user.education = education;
-    user.image = {
-            url: `data:image/png;base64,${public_id}`,
-            public_id,
-        };
+    user.image =image
     // Save the updated user document
     await user.save();
-
+console.log(user)
     // Send a response indicating success
     res.json({ message: 'Profile updated successfully', user: user });
   } catch (error) {
@@ -228,8 +226,7 @@ exports.upDateProfile = async (req, res) => {
 
 
 exports.uploadImage=async(req,res)=>{
-  
-  // console.log("req files => ", req.files);
+  // console.log("req files => ",req.files);
   try {
     const result = await cloudinary.uploader.upload(req.files.image.path);
     // console.log("uploaded image url => ", result);
