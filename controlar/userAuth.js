@@ -3,15 +3,15 @@ const { hashPassword, comparePassword } = require("../helper/auth")
 const jwt = require("jsonwebtoken")
 const StudentDetails = require("../models/StudentDetailModel")
 const mongoose = require('mongoose');
-const cloudinary=require("cloudinary")
+const cloudinary = require("cloudinary")
 cloudinary.config({
   cloud_name: "arefintalukder5",
-  api_key:"622592679337996" ,
+  api_key: "622592679337996",
   api_secret: "lQqwTTsKLLgm0F3_yasknj-jefg",
 });
 exports.register = async (req, res) => {
-   console.log("REGISTER ENDPOINT => ", req.body);
-  const { name,  password, phone } = req.body;
+  //  console.log("REGISTER ENDPOINT => ", req.body);
+  const { name, password, phone } = req.body;
   // validation
   if (!name) {
     return res.json({
@@ -43,7 +43,7 @@ exports.register = async (req, res) => {
   });
   try {
     await user.save();
-    // console.log("REGISTERED USE => ", user);
+    console.log("REGISTERED USE => ", user);
     return res.json({
       ok: true,
     });
@@ -57,6 +57,7 @@ exports.login = async (req, res) => {
   // console.log(req.body);
   try {
     const { phone, password } = req.body;
+    console.log(phone, password)
     // check if our db has user with that email
     const user = await User.findOne({ phone });
     if (!user) {
@@ -179,53 +180,92 @@ exports.getAllStudents = async (req, res) => {
 
 // Route for updating user profile
 
-exports.upDateProfile = async (req, res) => {
-  const {
-    name,
-    email,
-    phone,
-    father,
-    mother,
-    paddress,
-    parent,
-    education,
-    image
-  } = req.body;
-  const userId = req.user._id; 
-  console.log(userId)
-  // Assuming you have authentication middleware that sets req.user
-console.log(name,email,phone,father,mother,paddress,parent,education,image)
-  try {
-    // Find the user by ID
-    const user = await User.findById(userId);
+// exports.upDateProfile = async (req, res) => {
+//   const userId = req.params.id;
 
+//   try {
+//     console.log("ts", userId);
+
+//     // Find the user by ID
+//     const users=await User.findById({userId})
+//     console.log(users.password)
+//     let user = await User.findByIdAndUpdate(userId, {
+//       name: req.body.name,
+//       email: req.body.email,
+//       phone: req.body.phone,
+//       father: req.body.father,
+//       mother: req.body.mother,
+//       paddress: req.body.paddress,
+//       permanent: req.body.permanent,
+//       education: req.body.education,
+//       image: req.body.image,
+//       password:users.password
+//     }, { new: true });
+
+//     console.log(user);
+
+//     if (!user) {
+//       return res.status(404).json({ error: 'User not found' });
+//     }
+
+//     // Exclude the password from the update
+//     user.password = undefined;
+
+//     // Save the updated user document
+//     await user.save();
+
+//     // Send a response indicating success
+//     res.json({ message: 'Profile updated successfully', user });
+//   } catch (error) {
+//     console.error('Error updating profile:', error);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// };
+
+
+exports.upDateProfile = async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+    // console.log("ts", userId);
+
+    // Find the user by ID
+    const user = await User.findById(userId); // Fix: Remove the curly braces around userId
+    // console.log(user.password);
+
+    // Check if the user is not found
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Update the user's profile information
-    user.name = name;
-    user.email = email;
-    user.phone = phone;
-    user.father = father;
-    user.mother = mother;
-    user.paddress = paddress;
-    user.parent = parent;
-    user.education = education;
-    user.image =image
+    // Update user information
+    user.name = req.body.name;
+    user.email = req.body.email;
+    user.phone = req.body.phone;
+    user.father = req.body.father;
+    user.mother = req.body.mother;
+    user.paddress = req.body.paddress;
+    user.permanent = req.body.permanent;
+    user.education = req.body.education;
+    user.image = req.body.image;
+
     // Save the updated user document
     await user.save();
-console.log(user)
+
+    // Exclude the password from the response
+    user.password = undefined;
+
     // Send a response indicating success
-    res.json({ message: 'Profile updated successfully', user: user });
+    res.json({ message: 'Profile updated successfully', user });
   } catch (error) {
     console.error('Error updating profile:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
-}
+};
 
 
-exports.uploadImage=async(req,res)=>{
+
+exports.uploadImage = async (req, res) => {
   // console.log("req files => ",req.files);
   try {
     const result = await cloudinary.uploader.upload(req.files.image.path);

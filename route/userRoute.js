@@ -17,5 +17,5 @@ router.post("/login",login);
 router.get('/profile', requireAuth, currentUser);
 router.post("/create-student/:id",requireAuth,checkAdmin,createStudentdetails);
 router.get("/all-student",getAllStudents)
-router.put("/profile-update",requireAuth,upDateProfile)
+router.put("/profile-update/:id",upDateProfile)
 module.exports = router;

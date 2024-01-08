@@ -10,7 +10,6 @@ const userSchema = new Schema(
     email: {
       type: String,
       trim: true,
-      unique: true,
     },
     password: {
       type: String,
@@ -19,7 +18,7 @@ const userSchema = new Schema(
       max: 64,
     },
     phone: {
-      type: String,
+      type: Number,
       required: true,
       unique: true,
 
