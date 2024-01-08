@@ -19,7 +19,7 @@ exports.createBlog = async (req, res) => {
         await newBlog.save();
 
         // Use populate to fetch details of the author and attach them to the blog
-        const populatedBlog = await newBlog.populate('author', 'name email image')
+        const populatedBlog = await newBlog.populate('author', 'name phone image')
 
         res.status(201).json({ message: 'Blog created successfully', blog: populatedBlog });
     } catch (error) {
@@ -33,7 +33,7 @@ exports.allPendingBlog = async (req, res) => {
     try {
         // Find all blogs with status 'draft'
         const pendingBlogs = await Blog.find({ status: 'draft' })
-            .populate('author', 'name email'); // Populate the 'author' field with user details
+            .populate('author', 'name phone'); // Populate the 'author' field with user details
         res.status(200).json({ pendingBlogs });
     } catch (error) {
         console.error('Error getting pending blogs:', error);
@@ -109,7 +109,7 @@ exports.allPublishedBlog = async (req, res) => {
     try {
         // Find all blogs with status 'published'
         const publishedBlogs = await Blog.find({ status: 'published' })
-            .populate('author', 'name email'); // Populate the 'author' field with user details
+            .populate('author', 'name phone'); // Populate the 'author' field with user details
 
         res.status(200).json({ publishedBlogs });
     } catch (error) {
@@ -121,7 +121,7 @@ exports.allPublishedBlogService = async (req, res) => {
     try {
 
         const publishedstudy = await Blog.find({ 'tags.service': true, status: 'published' })
-        .populate('author', 'name email');
+        .populate('author', 'name phone');
         res.status(200).json({ publishedstudy });
 
     } catch (error) {
@@ -134,7 +134,7 @@ exports.allPublishedBlogBlogs = async (req, res) => {
     try {
 
         const publishedstudy = await Blog.find({ 'tags.blogs': true, status: 'published' })
-        .populate('author', 'name email');
+        .populate('author', 'name phone');
         res.status(200).json({ publishedstudy });
 
     } catch (error) {
@@ -147,7 +147,7 @@ exports.allPublishedBlogstudy = async (req, res) => {
     try {
 
         const publishedstudy = await Blog.find({ 'tags.study': true, status: 'published' })
-        .populate('author', 'name email');
+        .populate('author', 'name phone');
         res.status(200).json({ publishedstudy });
 
     } catch (error) {
@@ -161,13 +161,14 @@ exports.singleBlogconvert = async (req, res) => {
 }
 
 exports.CreateCarusel = async (req,res) => {
+    const {image,category}=req.body;
     try {
 
-        const { image, category } = req.body;
-        if (!category) {
-            return res.status(400).json({ error: 'Category is required.' });
+        // const { image, category } = req.body;
+        // if (!category) {
+        //     return res.status(400).json({ error: 'Category is required.' });
 
-        }
+        // }
         const newCaruselModel = new CaruselModel({
             category,
             author: req.user._id,
@@ -180,7 +181,7 @@ exports.CreateCarusel = async (req,res) => {
         await newCaruselModel.save();
 
         // Use populate to fetch details of the author and attach them to the blog
-        const populatedTopCarusel = await newCaruselModel.populate('author', 'name email image')
+        const populatedTopCarusel = await newCaruselModel.populate('author', 'name phone image')
 
         res.status(201).json({ message: 'Blog created successfully', carusel: populatedTopCarusel });
     } catch (err) {
@@ -193,7 +194,7 @@ exports.getCaruselDraft=async(req,res)=>{
     try {
         // Find all blogs with status 'draft'
         const AllpendingCarusel = await CaruselModel.find({ status: 'draft' })
-            .populate('author', 'name email'); // Populate the 'author' field with user details
+            .populate('author', 'name '); // Populate the 'author' field with user details
         res.status(200).json({ AllpendingCarusel });
     } catch (error) {
         console.error('Error getting pending blogs:', error);
@@ -248,7 +249,7 @@ exports.getCarusel = async (req, res) => {
     try {
         // Find all carousels with status 'published'
         const publishedCarusels = await CaruselModel.find({ status: 'published' })
-            .populate('author', 'name email'); // Populate the 'author' field with user details
+            .populate('author', 'name'); // Populate the 'author' field with user details
 
         res.status(200).json({ publishedCarusels });
     } catch (error) {

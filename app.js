@@ -25,6 +25,8 @@ const app = express();
 const port = 5000;
 const corsOptions = {
   origin: ['http://localhost:3000', 'http://localhost:5173','http://45.77.247.238:3000/',
+  'http://45.77.247.238:5174/','http://45.77.247.238:5173/',
+  'http://45.77.247.238:4173/',
   "*","http://bosboll.com/"],
   
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
