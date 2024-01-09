@@ -61,16 +61,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 const helmet = require('helmet');
 app.use(helmet());
-app.get('/api/getAllData', async (req, res) => {
-  try {
-    const data = await getAllData();
-    console.log("data",data)
-    res.status(200).json(data);
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Internal server error.', details: error.message });
-  }
-});
+// app.get('/api/getAllData', async (req, res) => {
+//   try {
+//     const data = await getAllData();
+//     console.log("data",data)
+//     res.status(200).json(data);
+//   } catch (error) {
+//     console.error('Error:', error);
+//     res.status(500).json({ error: 'Internal server error.', details: error.message });
+//   }
+// });
 
 // 
 app.use('/api/', require('./route/userContactRoute'));
