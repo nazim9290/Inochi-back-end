@@ -23,18 +23,28 @@ db.once('open', () => {
 });
 const app = express();
 const port = 5000;
-const corsOptions = {
-  origin: ['http://localhost:3000', 'http://localhost:5173','http://45.77.247.238:3000/',
-  'http://45.77.247.238:5174/','http://45.77.247.238:5173/',
-  'http://45.77.247.238:4173/',
-  "*","http://bosboll.com/"],
+// const corsOptions = {
+//   origin: ['http://localhost:3000', "*",'http://localhost:5173','http://45.77.247.238:3000/',
+//   'http://45.77.247.238:5174/','http://45.77.247.238:5173/',
+//   'http://45.77.247.238:4173/',
+//   "*","http://bosboll.com/"],
   
+//   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+//   credentials: true, // enable set cookie
+//   optionsSuccessStatus: 204,
+//   allowedHeaders: 'Content-Type, Authorization', // specify allowed headers
+//   exposedHeaders: 'Content-Disposition', // specify headers exposed to the client
+// };
+const corsOptions = {
+  origin: '*',
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  credentials: true, // enable set cookie
+  credentials: true,
   optionsSuccessStatus: 204,
-  allowedHeaders: 'Content-Type, Authorization', // specify allowed headers
-  exposedHeaders: 'Content-Disposition', // specify headers exposed to the client
+  allowedHeaders: 'Content-Type, Authorization',
+  exposedHeaders: 'Content-Disposition',
 };
+
+app.use(cors(corsOptions));
 
 // const corsOptionsadmin = {
 //   origin: 'http://localhost:3000/', // replace with your frontend URL
