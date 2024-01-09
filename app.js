@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 require("dotenv").config();
 const multer = require('multer');
+var Fingerprint = require("express-fingerprint");
 // const GridFsStorage=require("multer-grids-storage")
 const mongoose = require('mongoose');
 mongoose.connect('mongodb+srv://arefintalukder5:Arefin@cluster0.yrhgh55.mongodb.net/?retryWrites=true&w=majority', {
@@ -35,17 +36,40 @@ const port = 5000;
 //   allowedHeaders: 'Content-Type, Authorization', // specify allowed headers
 //   exposedHeaders: 'Content-Disposition', // specify headers exposed to the client
 // };
-const corsOptions = {
-  origin: '*',
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  credentials: true,
-  optionsSuccessStatus: 204,
-  allowedHeaders: 'Content-Type, Authorization',
-  exposedHeaders: 'Content-Disposition',
-};
 
+// Use the express-fingerprint middleware
+
+app.use(
+  Fingerprint({
+    parameters: [
+      // Defaults
+      Fingerprint.useragent,
+      Fingerprint.acceptHeaders,
+      Fingerprint.geoip,
+    ],
+  })
+);
+const corsOptions = {
+  origin: "*",
+};
 app.use(cors(corsOptions));
 
+app.use(function (req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "X-Requested-With");
+  next();
+});
+
+// Endpoint to get device fingerprint
+app.get("/fingerprint", (req, res) => {
+  const fingerprint = req.fingerprint;
+  const clientIp = req.clientIp;
+  res.json({ fingerprint, clientIp });
+});
+
+// 1) GLOBAL MIDDLEWARES
+
+//Set security HTTP headers
 // const corsOptionsadmin = {
 //   origin: 'http://localhost:3000/', // replace with your frontend URL
 //   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
