@@ -59,6 +59,8 @@ app.get('/',async(req,res)=>{
 // Body parser middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+const helmet = require('helmet');
+app.use(helmet());
 app.get('/api/getAllData', async (req, res) => {
   try {
     const data = await getAllData();
