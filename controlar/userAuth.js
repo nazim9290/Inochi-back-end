@@ -167,10 +167,9 @@ exports.createStudentdetails = async (req, res) => {
 // GET route to fetch all student details
 exports.getAllStudents = async (req, res) => {
   try {
-    const allUsersWithStudentDetails = await User.find().populate('userDetails', 'name address class branch studentId accountType');
-    const users = allUsersWithStudentDetails.map(user => user.userDetails);
+    const allUser = await User.find()
 
-    res.json({ users });
+    res.json({ allUser });
   } catch (error) {
     console.error('Error fetching all users with student details:', error);
     res.status(500).json({ error: 'Internal Server Error' });
