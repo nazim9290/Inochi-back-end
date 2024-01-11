@@ -54,7 +54,7 @@ exports.register = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-  console.log(req.body);
+  // console.log(req.body);
   try {
     const { phone, password } = req.body;
     console.log(phone, password)
@@ -244,7 +244,7 @@ exports.upDateProfile = async (req, res) => {
     user.father = req.body.father;
     user.mother = req.body.mother;
     user.paddress = req.body.paddress;
-    user.permanent = req.body.permanent;
+    user.parent = req.body.permanent;
     user.education = req.body.education;
     user.image = req.body.image;
 

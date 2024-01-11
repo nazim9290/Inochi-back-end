@@ -44,6 +44,12 @@ const userSchema = new Schema(
     url: String,
     public_id: String,
   },
+  branch:{
+    type: String,
+
+    
+  },
+  
     imagePublicId: {
       type: String,
     },
