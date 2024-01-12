@@ -46,7 +46,7 @@ const userSchema = new Schema(
   },
   branch:{
     type: String,
-
+    default: "A",
     
   },
   
