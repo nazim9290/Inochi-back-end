@@ -55,7 +55,6 @@ const userSchema = new Schema(
     },
     classrool:{
       type: Number,
-      required: true,
       unique: true,
     },
    
