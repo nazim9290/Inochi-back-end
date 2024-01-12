@@ -224,15 +224,10 @@ exports.getAllStudents = async (req, res) => {
 
 exports.upDateProfile = async (req, res) => {
   const userId = req.params.id;
-
+const rool=210
   try {
-    // console.log("ts", userId);
-
-    // Find the user by ID
     const user = await User.findById(userId); // Fix: Remove the curly braces around userId
-    // console.log(user.password);
 
-    // Check if the user is not found
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -247,7 +242,7 @@ exports.upDateProfile = async (req, res) => {
     user.parent = req.body.permanent;
     user.education = req.body.education;
     user.image = req.body.image;
-
+   user.classrool=rool+1 
     // Save the updated user document
     await user.save();
 

@@ -53,6 +53,11 @@ const userSchema = new Schema(
     imagePublicId: {
       type: String,
     },
+    classrool:{
+      type: Number,
+      required: true,
+      unique: true,
+    },
    
     role: {
       type: String,
