@@ -238,14 +238,21 @@ exports.userRole = async (req, res) => {
 
   try {
     const user = await User.findById(userId);
-// console.log(req.body.role)
+    // console.log(req.body); // Check the entire request body
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     // Update user information
-    user.role = req.body.role; // Make sure to send the updated value from React
-    
+    if (req.body.role) {
+      user.role = req.body.role;
+    }
+
+    if (req.body.branch) {
+      user.branch = req.body.branch;
+    }
+
     // Save the updated user document
     await user.save();
 
@@ -259,6 +266,33 @@ exports.userRole = async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
+// exports.userRole = async (req, res) => {
+//   const userId = req.params.id;
+
+//   try {
+//     const user = await User.findById(userId);
+// console.log(req.body)
+//     if (!user) {
+//       return res.status(404).json({ error: 'User not found' });
+//     }
+
+//     // Update user information
+//     user.role = req.body.role; // Make sure to send the updated value from React
+    
+//     // Save the updated user document
+//     // await user.save();
+
+//     // Exclude the password from the response
+//     user.password = undefined;
+
+//     // Send a response indicating success
+//     res.json({ message: 'Profile updated successfully', user });
+//   } catch (error) {
+//     console.error('Error updating profile:', error);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// };
 exports.uploadImage = async (req, res) => {
   // console.log("req files => ",req.files);
   try {
