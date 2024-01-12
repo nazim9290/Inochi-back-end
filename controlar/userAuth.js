@@ -54,11 +54,8 @@ exports.register = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-  // console.log(req.body);
   try {
     const { phone, password } = req.body;
-    // console.log(phone, password)
-    // check if our db has user with that email
     const user = await User.findOne({ phone });
     if (!user) {
       return res.json({
