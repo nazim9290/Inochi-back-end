@@ -231,14 +231,14 @@ exports.userRole = async (req, res) => {
 
   try {
     const user = await User.findById(userId);
-
+console.log(req.body.role)
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     // Update user information
-    user.role = req.body.updatedRole; // Make sure to send the updated value from React
-
+    user.role = req.body.role; // Make sure to send the updated value from React
+    
     // Save the updated user document
     await user.save();
 
