@@ -175,51 +175,7 @@ exports.getAllStudents = async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
-// 
 
-// Route for updating user profile
-
-// exports.upDateProfile = async (req, res) => {
-//   const userId = req.params.id;
-
-//   try {
-//     console.log("ts", userId);
-
-//     // Find the user by ID
-//     const users=await User.findById({userId})
-//     console.log(users.password)
-//     let user = await User.findByIdAndUpdate(userId, {
-//       name: req.body.name,
-//       email: req.body.email,
-//       phone: req.body.phone,
-//       father: req.body.father,
-//       mother: req.body.mother,
-//       paddress: req.body.paddress,
-//       permanent: req.body.permanent,
-//       education: req.body.education,
-//       image: req.body.image,
-//       password:users.password
-//     }, { new: true });
-
-//     console.log(user);
-
-//     if (!user) {
-//       return res.status(404).json({ error: 'User not found' });
-//     }
-
-//     // Exclude the password from the update
-//     user.password = undefined;
-
-//     // Save the updated user document
-//     await user.save();
-
-//     // Send a response indicating success
-//     res.json({ message: 'Profile updated successfully', user });
-//   } catch (error) {
-//     console.error('Error updating profile:', error);
-//     res.status(500).json({ error: 'Internal Server Error' });
-//   }
-// };
 
 
 exports.upDateProfile = async (req, res) => {
@@ -257,7 +213,17 @@ const rool=210
   }
 };
 
+exports.allFree = async (req, res) => {
+  try {
+    const gustUsers = await User.find({ role: 'gust' });
 
+    // Do something with gustUsers, for example, send them in the response
+    res.json(gustUsers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Internal Server Error');
+  }
+};
 
 exports.uploadImage = async (req, res) => {
   // console.log("req files => ",req.files);

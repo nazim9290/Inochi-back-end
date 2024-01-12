@@ -6,7 +6,9 @@ const {checkStudent}=require("../midleware/student.js")
 // controllers
 const formidable=require("express-formidable")
 const {register,login,currentUser, createStudentdetails, getAllStudents,
-  upDateProfile,uploadImage}=require("../controlar/userAuth.js");
+  upDateProfile,uploadImage
+,allFree
+}=require("../controlar/userAuth.js");
 router.post(
   "/upload-image-file",
   formidable({ maxFileSize: 5 * 1024 * 1024 }),
@@ -17,6 +19,7 @@ router.post("/register",register);
 router.post("/login",login);
 router.get('/profile', requireAuth, currentUser);
 router.post("/create-student/:id",requireAuth,checkAdmin,createStudentdetails);
-router.get("/all-student",getAllStudents)
+router.get("/all-student",requireAuth,checkAdmin,getAllStudents);
+router.get("/all-guset",,allFree)
 router.put("/profile-update/:id",upDateProfile)
 module.exports = router;
