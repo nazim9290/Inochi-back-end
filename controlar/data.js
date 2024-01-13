@@ -3,7 +3,7 @@ const ImageTopCarousel = require('../models/imageTopCarousel');
 const Team = require("../models/Team.js");
 const ContacPage=require("../models/ContacPageModel.js")
 const Review =require("../models/Review.js")
-
+const Seminer=require("../models/Seminer.js")
 exports.contacpageCreate=async(req,res)=>{
    try{
       const {title,content,image}=req.body;
@@ -181,7 +181,7 @@ exports.allTeam = async (req, res) => {
 };
 exports.deleteSingeteam = async (req, res) => {
     const teamId = req.params._id; // Assuming team ID is passed as a route parameter
-console.log(teamId)
+// console.log(teamId)
     try {
         // Find the team member by ID and remove it
         const deletedTeam = await Team.findOneAndDelete({ _id: teamId });
@@ -229,3 +229,51 @@ res.json(review)
  
     }
 }
+// createSeminar
+exports.createSeminar= async (req, res) => {
+    const { subtitle, title, image,time } = req.body;
+    try {
+        // Create a new blog and associate it with the authenticated user
+        const newSeminer = new Seminer({
+            title,
+            subtitle,
+            image,
+            time,
+            date
+        });
+        await newSeminer.save();
+        const PopulatednewSeminer = await newSeminer.populate('author', 'name email image')
+
+        res.status(201).json({ message: ' Seminer created successfully', team:PopulatednewSeminer  });
+    } catch (error) {
+        console.error('Error creating Seminer:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+exports.allSeminer=async (req, res) => {
+    try {
+        // Find all blogs with status 'draft'
+        const seminer = await Seminer.find()
+        res.status(200).json({ seminer });
+    } catch (error) {
+        console.error('Error getting   All Seminer:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+exports.deleteSingeSeminer= async (req, res) => {
+    const seminerId = req.params._id; // Assuming team ID is passed as a route parameter
+// console.log(teamId)
+    try {
+        // Find the team member by ID and remove it
+        const deletedSeminer= await Seminer.findOneAndDelete({ _id: seminerId });
+
+        if (!deletedSeminer) {
+            return res.status(404).json({ error: ' Seminer  not found' });
+        }
+
+        res.status(200).json({ message: 'Seminer deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting Seminer:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
