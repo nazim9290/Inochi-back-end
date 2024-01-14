@@ -231,7 +231,7 @@ res.json(review)
 }
 // createSeminar
 exports.createSeminar= async (req, res) => {
-    const { subtitle, title, image,time } = req.body;
+    const { subtitle, title, image,time ,date} = req.body;
     try {
         // Create a new blog and associate it with the authenticated user
         const newSeminer = new Seminer({
@@ -242,9 +242,8 @@ exports.createSeminar= async (req, res) => {
             date
         });
         await newSeminer.save();
-        const PopulatednewSeminer = await newSeminer.populate('author', 'name email image')
 
-        res.status(201).json({ message: ' Seminer created successfully', team:PopulatednewSeminer  });
+        res.status(201).json({ message: ' Seminer created successfully',});
     } catch (error) {
         console.error('Error creating Seminer:', error);
         res.status(500).json({ error: 'Internal Server Error' });
