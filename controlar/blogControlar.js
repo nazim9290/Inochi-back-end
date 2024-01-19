@@ -52,17 +52,28 @@ exports.singleBlog = async (req, res) => {
         if (!blog) {
             return res.status(404).json({ error: 'Blog not found' });
         }
-
         // Update the status to 'published'
         blog.status = 'published';
         await blog.save();
-
         res.status(200).json({ message: 'Blog published successfully', blog });
     } catch (error) {
         console.error('Error updating blog status:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+// public single blog:
+const singleblogpublic=async(req,res)=>{
+    try{
+        const { id } = req.params;
+        const blog = await Blog.findById(id);
+        res.status(200).json({  blog });
+
+    }catch(error){
+        res.status(500).json({ error: 'Internal Server Error' });
+
+    }
+
+}
 exports.singlgleBlogTags=async (req, res) => {
     const blogId = req.params.id;
   const { tags, status } = req.body;

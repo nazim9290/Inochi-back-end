@@ -18,6 +18,7 @@ const { createBlog, allPublishedBlog,
         allPublishedBlogBlogs,
         allPublishedBlogstudy,
         allPublishedBlogService,
+        singleblogpublic,
         CreateCarusel } = require("../controlar/blogControlar");
 
 router.post("/create-blog", requireAuth, createBlog);
@@ -27,6 +28,7 @@ router.delete('/blog/:id', requireAuth, checkAdmin, deleteBlogById);
 // 
 router.put('/approve-blog/:id',singlgleBlogTags)
 router.put('/publised-single-blog/:id', requireAuth, checkAdmin, singleBlogconvert);
+// 
 // 
 router.post("/create-carusel", requireAuth,checkAdmin, CreateCarusel)
 // public route :
@@ -39,6 +41,6 @@ router.get("/published-carusels", getCarusel);
 router.get("/blogs-published",allPublishedBlogBlogs);
 router.get("/blogs-study",allPublishedBlogstudy)
 router.get("/blogs-service",allPublishedBlogService)
-
+router.get("/singleblogs/:id",singleblogpublic)
 
 module.exports = router;
