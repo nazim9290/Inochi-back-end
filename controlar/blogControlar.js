@@ -62,7 +62,7 @@ exports.singleBlog = async (req, res) => {
     }
 };
 // public single blog:
-const singleblogpublic=async(req,res)=>{
+exports.singleblogpublic=async(req,res)=>{
     try{
         const { id } = req.params;
         const blog = await Blog.findById(id);
