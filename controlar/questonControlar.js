@@ -2,12 +2,13 @@ const Question = require("../models/Question");
 
 exports.createQuestion = async (req, res) => {
   const { questionName, first, second, third, answer, category } = req.body;
+  console.log(req.body.second);
+  // console.log(req)
   if (!category) {
     return res.status(400).json({
       error: "Category Must Need"
     })
   }
-  // Check if any required fields are blank
   if (!questionName || !first || !second || !third || !answer) {
     return res.status(400).json({
       error: "All fields are required. Please fill in all the fields.",
@@ -19,11 +20,14 @@ exports.createQuestion = async (req, res) => {
       answer: answer,
       questionName: questionName,
       incorrect_answer: [first, second, third],
+      first: first,  
+      second: second,
+      third: third,
       category: category
     });
 
-    // question.save();
-
+    question.save();
+    console.log(question)
     return res.status(201).json({
       ok: true,
       question,

@@ -1,11 +1,7 @@
 
 const mongoose = require('mongoose');
 
-// const Document=require("../models/Document.js")
 
-// Configure multer for handling file uploads
-
-// Handle file uploads and store data in MongoDB
 
 const express = require("express");
 const { requireAuth } = require("../midleware/auth")

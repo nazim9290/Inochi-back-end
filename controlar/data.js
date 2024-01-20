@@ -147,7 +147,6 @@ exports.getTopCaruselImage = async (req, res) => {
 exports.createTeam = async (req, res) => {
     const { designation,position, name, image, facebook,twiter,email,linkdin,youtube} = req.body;
     try {
-        // Create a new blog and associate it with the authenticated user
         const newTeam = new Team({
             name,
             position,
