@@ -320,3 +320,13 @@ exports.AllBrand=async(req,res)=>{
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+exports.getAllBrand=async(req,res)=>{
+    try {
+        // Find all blogs with status 'draft'
+        const brand = await Brand.find()
+        res.status(200).json({ brand });
+    } catch (error) {
+        console.error('Error getting   All Brand:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+}

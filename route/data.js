@@ -25,7 +25,8 @@ const { contacpageCreate,
      deleteSingeSeminer,
      AddVideoPlaylist,
      getAllPlaylist,
-     AllBrand
+     AllBrand,
+     getAllBrand
 } = require("../controlar/data.js");
 
 // router.post("/homepage",HomePageCarusel);
@@ -43,5 +44,6 @@ router.delete("/seminar-delete/:_id", requireAuth, checkAdmin, deleteSingeSemine
 // video add
 router.post("/add-video", requireAuth, checkAdmin,AddVideoPlaylist);
 router.get("/video-playlist",getAllPlaylist);
-router.post("/brand",requireAuth, checkAdmin,AllBrand)
+router.post("/brand",requireAuth, checkAdmin,AllBrand);
+router.get("/all-brand",getAllBrand)
 module.exports = router;
