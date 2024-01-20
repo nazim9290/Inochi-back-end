@@ -145,14 +145,19 @@ exports.getTopCaruselImage = async (req, res) => {
 // team:
 
 exports.createTeam = async (req, res) => {
-    const { designation, name, image, } = req.body;
+    const { designation, name, image, facebook,twiter,email,linkdin,youtube} = req.body;
     try {
         // Create a new blog and associate it with the authenticated user
         const newTeam = new Team({
             name,
             designation,
             author: req.user._id,
-            image
+            image,
+            facebook,
+            twiter,
+            email,
+            linkdin,
+            youtube
         });
         // newTeam.image = {
         //     url: `data:image/png;base64,${public_id}`,
