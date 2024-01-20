@@ -7,7 +7,9 @@ const { checkStudent } = require("../midleware/student.js")
 const formidable = require("express-formidable")
 const { register, login, currentUser, createStudentdetails, getAllStudents,
   upDateProfile, uploadImage
-  , allFree, userRole,AllStudent
+  , allFree, userRole,AllStudent,
+  getBranchA,
+  getBranchB
 } = require("../controlar/userAuth.js");
 router.post(
   "/upload-image-file",
@@ -22,6 +24,8 @@ router.post("/create-student/:id", requireAuth, checkAdmin, createStudentdetails
 router.get("/all-student", requireAuth, checkAdmin, getAllStudents);
 router.get("/all-guset", requireAuth, checkAdmin, allFree);
 router.get("/all-students", requireAuth, checkAdmin, AllStudent);
+router.get("/all-students/brancha", requireAuth, checkAdmin, getBranchA);
+router.get("/all-students/branchb", requireAuth, checkAdmin, getBranchB);
 
 router.put("/profile-update/:id", upDateProfile);
 router.put("/change-role/:id", requireAuth, checkAdmin, userRole);

@@ -209,7 +209,29 @@ const rool=210
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+exports.getBranchA = async (req, res) => {
+  try {
+    const gustUsers = await User.find({ branch: 'A' });
 
+    // Do something with gustUsers, for example, send them in the response
+    res.json(gustUsers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Internal Server Error');
+  }
+};
+
+exports.getBranchB = async (req, res) => {
+  try {
+    const gustUsers = await User.find({ branch: 'B' });
+
+    // Do something with gustUsers, for example, send them in the response
+    res.json(gustUsers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Internal Server Error');
+  }
+};
 exports.allFree = async (req, res) => {
   try {
     const gustUsers = await User.find({ role: 'gust' });
