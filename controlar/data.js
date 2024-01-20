@@ -5,6 +5,7 @@ const ContacPage=require("../models/ContacPageModel.js")
 const Review =require("../models/Review.js")
 const Seminer=require("../models/Seminer.js");
 const Video=require("../models/Video.js")
+const Brand =require("../models/Brand.js")
 exports.contacpageCreate=async(req,res)=>{
    try{
       const {title,content,image}=req.body;
@@ -303,3 +304,19 @@ exports.getAllPlaylist=async(req,res)=>{
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }
+exports.AllBrand=async(req,res)=>{
+    const {  image,
+        } = req.body;
+    try {
+        // Create a new blog and associate it with the authenticated user
+        const brand = new Video({
+            image,
+            
+        });
+        await brand.save();
+        res.status(201).json({ message: 'Team Member created successfully', brand  });
+    } catch (error) {
+        console.error('Error creating blog:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
