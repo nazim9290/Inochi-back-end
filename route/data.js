@@ -26,7 +26,8 @@ const { contacpageCreate,
      AddVideoPlaylist,
      getAllPlaylist,
      AllBrand,
-     getAllBrand
+     getAllBrand,
+     deleteSingeBrandByID
 } = require("../controlar/data.js");
 
 // router.post("/homepage",HomePageCarusel);
@@ -46,4 +47,5 @@ router.post("/add-video", requireAuth, checkAdmin,AddVideoPlaylist);
 router.get("/video-playlist",getAllPlaylist);
 router.post("/brand",requireAuth, checkAdmin,AllBrand);
 router.get("/all-brand",getAllBrand)
+router.delete("/brand-delete/:is",requireAuth, checkAdmin,deleteSingeBrandByID)
 module.exports = router;

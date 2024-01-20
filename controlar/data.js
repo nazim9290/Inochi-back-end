@@ -330,3 +330,20 @@ exports.getAllBrand=async(req,res)=>{
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }
+exports.deleteSingeBrandByID = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        // Find and delete the blog by id
+        const deletedBlog = await Brand.findByIdAndDelete(id);
+
+        if (!deletedBlog) {
+            return res.status(404).json({ error: 'Brand not found' });
+        }
+
+        res.status(200).json({ message: 'Brand deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting Brand:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
