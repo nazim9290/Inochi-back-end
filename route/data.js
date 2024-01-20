@@ -22,7 +22,9 @@ const { contacpageCreate,
      ReviewCreate, Review
      , createSeminar,
      allSeminer,
-     deleteSingeSeminer
+     deleteSingeSeminer,
+     AddVideoPlaylist,
+     getAllPlaylist
 } = require("../controlar/data.js");
 
 // router.post("/homepage",HomePageCarusel);
@@ -37,4 +39,7 @@ router.get("/review", Review);
 router.post("/seminar-create", requireAuth, checkAdmin, createSeminar);
 router.get("/seminar", allSeminer);
 router.delete("/seminar-delete/:_id", requireAuth, checkAdmin, deleteSingeSeminer);
+// video add
+router.post("/add-video", requireAuth, checkAdmin,AddVideoPlaylist);
+router.get("/video-playlist",getAllPlaylist)
 module.exports = router;

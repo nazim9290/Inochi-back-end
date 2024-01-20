@@ -3,7 +3,8 @@ const ImageTopCarousel = require('../models/imageTopCarousel');
 const Team = require("../models/Team.js");
 const ContacPage=require("../models/ContacPageModel.js")
 const Review =require("../models/Review.js")
-const Seminer=require("../models/Seminer.js")
+const Seminer=require("../models/Seminer.js");
+const Video=require("../models/Video.js")
 exports.contacpageCreate=async(req,res)=>{
    try{
       const {title,content,image}=req.body;
@@ -276,3 +277,29 @@ exports.deleteSingeSeminer= async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+exports.AddVideoPlaylist=async (req, res) => {
+    const {  playlistTitle,
+        title} = req.body;
+    try {
+        // Create a new blog and associate it with the authenticated user
+        const video = new Video({
+            playlistTitle,
+            title,
+        });
+        await video.save();
+        res.status(201).json({ message: 'Team Member created successfully', video  });
+    } catch (error) {
+        console.error('Error creating blog:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+exports.getAllPlaylist=async(req,res)=>{
+    try {
+        // Find all blogs with status 'draft'
+        const video = await Video.find()
+        res.status(200).json({ video });
+    } catch (error) {
+        console.error('Error getting   All Video Playlist:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+}

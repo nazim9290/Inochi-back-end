@@ -43,7 +43,9 @@ const blogSchema = new mongoose.Schema({
     },
   },
   // Add other fields as needed
-});
+},
+{ timestamps: true }
+);
 
 const Blog = mongoose.model('Blog', blogSchema);
 
