@@ -145,11 +145,12 @@ exports.getTopCaruselImage = async (req, res) => {
 // team:
 
 exports.createTeam = async (req, res) => {
-    const { designation, name, image, facebook,twiter,email,linkdin,youtube} = req.body;
+    const { designation,position, name, image, facebook,twiter,email,linkdin,youtube} = req.body;
     try {
         // Create a new blog and associate it with the authenticated user
         const newTeam = new Team({
             name,
+            position,
             designation,
             author: req.user._id,
             image,
@@ -159,22 +160,15 @@ exports.createTeam = async (req, res) => {
             linkdin,
             youtube
         });
-        // newTeam.image = {
-        //     url: `data:image/png;base64,${public_id}`,
-        //     public_id,
-        // };
         await newTeam.save();
-
-        // Use populate to fetch details of the author and attach them to the blog
         const populatedTeam = await newTeam.populate('author', 'name email image')
-
         res.status(201).json({ message: 'Team Member created successfully', team:populatedTeam  });
     } catch (error) {
         console.error('Error creating blog:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
-// 
+//
 exports.allTeam = async (req, res) => {
     try {
         // Find all blogs with status 'draft'

@@ -20,7 +20,10 @@ const teamSchema = new mongoose.Schema({
   email: {
     type: String,
   },
+  position:{
+    type: Number,
 
+  },
   linkdin: {
     type: String,
   },
