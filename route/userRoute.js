@@ -8,6 +8,7 @@ const formidable = require("express-formidable")
 const { register, login, currentUser, createStudentdetails, getAllStudents,
   upDateProfile, uploadImage
   , allFree, userRole,AllStudent,
+  BookSeminer,
   getBranchA,
   getBranchB
 } = require("../controlar/userAuth.js");
@@ -18,7 +19,9 @@ router.post(
 );
 
 router.post("/register", register);
+// router.post("/seminer-book",BookSeminer)
 router.post("/seminer-book",BookSeminer)
+
 router.post("/login", login);
 router.get('/profile', requireAuth, currentUser);
 router.post("/create-student/:id", requireAuth, checkAdmin, createStudentdetails);
