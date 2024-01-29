@@ -1,4 +1,5 @@
-const User = require("../models/userModel")
+const User = require("../models/userModel");
+const SeminerBookModel=require("../models/SeminerBookModel")
 const { hashPassword, comparePassword } = require("../helper/auth")
 const jwt = require("jsonwebtoken")
 const StudentDetails = require("../models/StudentDetailModel")
@@ -44,6 +45,31 @@ exports.register = async (req, res) => {
   try {
     await user.save();
     // console.log("REGISTERED USE => ", user);
+    return res.json({
+      ok: true,
+    });
+  } catch (err) {
+    console.log("REGISTER FAILED => ", err);
+    return res.status(400).send("Error. Try again.");
+  }
+};
+exports.BookSeminerasync= async(req, res) => {
+  const { name, email, phone } = req.body;
+  
+  const exist = await User.findOne({ email });
+  if (exist) {
+    return res.json({
+      error: "email is taken",
+    });
+  }
+ 
+  const user = new SeminerBookModel({
+    name,
+    phone,
+    email 
+  });
+  try {
+    await user.save();
     return res.json({
       ok: true,
     });

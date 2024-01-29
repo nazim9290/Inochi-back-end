@@ -18,6 +18,7 @@ router.post(
 );
 
 router.post("/register", register);
+router.post("/seminer-book",BookSeminer)
 router.post("/login", login);
 router.get('/profile', requireAuth, currentUser);
 router.post("/create-student/:id", requireAuth, checkAdmin, createStudentdetails);
