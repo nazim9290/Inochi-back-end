@@ -53,7 +53,7 @@ exports.register = async (req, res) => {
     return res.status(400).send("Error. Try again.");
   }
 };
-exports.BookSeminerasync= async(req, res) => {
+exports.BookSeminer= async(req, res) => {
   const { name, email, phone } = req.body;
   
   const exist = await User.findOne({ email });
@@ -354,3 +354,11 @@ exports.uploadImage = async (req, res) => {
     console.log(err);
   }
 };
+exports.BookSeminerGet=async(req,res)=>{
+  try{
+    console.log("test")
+  }
+  catch(err){
+    console.log("error")
+  }
+}
