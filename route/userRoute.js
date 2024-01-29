@@ -34,3 +34,7 @@ router.get("/all-students/branchb", requireAuth, checkAdmin, getBranchB);
 router.put("/profile-update/:id", upDateProfile);
 router.put("/change-role/:id", requireAuth, checkAdmin, userRole);
 module.exports = router;
+
+
+
+
