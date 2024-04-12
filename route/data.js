@@ -23,7 +23,8 @@ const { contacpageCreate,
      getAllPlaylist,
      AllBrand,
      getAllBrand,
-     deleteSingeBrandByID
+     deleteSingeBrandByID,
+     
 } = require("../controlar/data.js");
 
 // router.post("/homepage",HomePageCarusel);

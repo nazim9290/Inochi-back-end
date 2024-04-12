@@ -356,7 +356,10 @@ exports.uploadImage = async (req, res) => {
 };
 exports.BookSeminerGet=async(req,res)=>{
   try{
-    console.log("test")
+      // Find all blogs with status 'draft'
+      const pendingSeminer = await SeminerBookModel.find()
+      
+  res.status(200).json({ pendingSeminer });
   }
   catch(err){
     console.log("error")
