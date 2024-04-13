@@ -15,11 +15,7 @@ const CaruselModelSchema = new mongoose.Schema({
   category: {
     type: String, // Assuming the category is a string, adjust the type as needed
   },
-  author: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User', // Reference to the User model
-    required: true,
-  },
+  
   status: {
     type: String,
     enum: ['draft', 'published'], 

@@ -30,7 +30,7 @@ router.put('/approve-blog/:id',singlgleBlogTags)
 router.put('/publised-single-blog/:id', requireAuth, checkAdmin, singleBlogconvert);
 // 
 // 
-router.post("/create-carusel", requireAuth,checkAdmin, CreateCarusel)
+router.post("/create-carusel",  CreateCarusel)
 // public route :
 router.get('/published-blogs', allPublishedBlog);
 router.get("/draft-carusel", getCaruselDraft);

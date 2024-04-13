@@ -171,30 +171,26 @@ exports.singleBlogconvert = async (req, res) => {
     // this is convert single post  status draft mode to publish mode 
 }
 
+
+
+
 exports.CreateCarusel = async (req,res) => {
-    const {image,category}=req.body;
+    const {image}=req.body;
+    console.log("test carusel",image);
     try {
 
-        // const { image, category } = req.body;
-        // if (!category) {
-        //     return res.status(400).json({ error: 'Category is required.' });
-
-        // }
-        const newCaruselModel = new CaruselModel({
-            category,
-            author: req.user._id,
+        const populatedTopCarusel = new CaruselModel({
+            
             image
         });
         // newCaruselModel.image = {
         //     url: `data:image/png;base64,${public_id}`,
         //     public_id,
         // };
-        await newCaruselModel.save();
+        await populatedTopCarusel.save();
 
         // Use populate to fetch details of the author and attach them to the blog
-        const populatedTopCarusel = await newCaruselModel.populate('author', 'name phone image')
-
-        res.status(201).json({ message: 'Blog created successfully', carusel: populatedTopCarusel });
+        res.json({ message: 'Blog created successfully', carusel: populatedTopCarusel });
     } catch (err) {
         res.status(500).json({ error: 'Internal Server Error' });
 
@@ -205,13 +201,51 @@ exports.getCaruselDraft=async(req,res)=>{
     try {
         // Find all blogs with status 'draft'
         const AllpendingCarusel = await CaruselModel.find({ status: 'draft' })
-            .populate('author', 'name '); // Populate the 'author' field with user details
+             // Populate the 'author' field with user details
+             console.log(AllpendingCarusel)
         res.status(200).json({ AllpendingCarusel });
     } catch (error) {
         console.error('Error getting pending blogs:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }
+//draft
+// exports.getCaruselDraft = async (req, res) => {
+//     // Get all data from Carusel
+//     try {
+//         // Find all carousels with status 'draft' and include the 'image' field
+//         const AllpendingCarusel = await CaruselModel.find({ status: 'draft' }).select('image category author status');
+
+//         res.status(200).json({ AllpendingCarusel });
+//     } catch (error) {
+//         console.error('Error getting pending carousels:', error);
+//         res.status(500).json({ error: 'Internal Server Error' });
+//     }
+// }
+// exports.getCaruselDraft = async (req, res) => {
+//     // Get all data from Carusel
+//     try {
+//         // Find all carousels with status 'draft' and include the 'image' field
+//         const  allCarusels= await CaruselModel.find()
+
+//         res.status(200).json({allCarusels});
+//     } catch (error) {
+//         console.error('Error getting pending carousels:', error);
+//         res.status(500).json({ error: 'Internal Server Error' });
+//     }
+// }
+exports.getAllCarusels = async (req, res) => {
+    try {
+        // Find all carousels
+        const allCarusels = await CaruselModel.find()
+
+        res.status(200).json(allCarusels);
+    } catch (error) {
+        console.error('Error getting carousels:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+}
+
 
 exports.deleteCaruselDraft = async (req, res) => {
     const { id } = req.params;
