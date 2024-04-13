@@ -294,7 +294,8 @@ exports.getCarusel = async (req, res) => {
     try {
         // Find all carousels with status 'published'
         const publishedCarusels = await CaruselModel.find({ status: 'published' })
-            .populate('author', 'name'); // Populate the 'author' field with user details
+            // .populate('author', 'name'); // Populate the 'author' field with user details
+
 
         res.status(200).json({ publishedCarusels });
     } catch (error) {
@@ -302,3 +303,7 @@ exports.getCarusel = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+
+// const blog=()=>{
+
+// 
