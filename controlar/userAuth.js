@@ -74,7 +74,7 @@ exports.BookSeminer= async(req, res) => {
       ok: true,
     });
   } catch (err) {
-    console.log("REGISTER FAILED => ", err);
+    console.log("Bokking Seminer  FAILED => ", err);
     return res.status(400).send("Error. Try again.");
   }
 };
