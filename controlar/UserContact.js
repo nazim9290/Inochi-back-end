@@ -9,7 +9,8 @@ exports.contact = async (req, res) => {
     // Create a new contact instance
     const newContact = new Contact({ name, email, phone, msg });
 
-    // Save the contact to the database
+    // Save the contact to the database;
+    console.log("success ");
     await newContact.save();
 
     return res.status(201).json({ message: 'Your message sent successfully' });
