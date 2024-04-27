@@ -11,7 +11,7 @@ const contactSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    required: true,
+    // required: true,
   },
   msg: {
     type: String,
