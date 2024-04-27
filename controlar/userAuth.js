@@ -55,19 +55,13 @@ exports.register = async (req, res) => {
 };
 exports.BookSeminer= async(req, res) => {
   const { name, email, phone } = req.body;
-  
-  // const exist = await User.findOne({ email });
-  // if (exist) {
-  //   return res.json({
-  //     error: "email is taken",
-  //   });
-  // }
- 
+
   const user = new SeminerBookModel({
     name,
     phone,
     email 
   });
+  console.log("test")
   try {
     await user.save();
     return res.json({
