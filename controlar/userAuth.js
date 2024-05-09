@@ -25,10 +25,10 @@ exports.register = async (req, res) => {
     });
   }
 
-  const exist = await User.findOne({ phone });
+  const exist = await User.findOne({ email });
   if (exist) {
     return res.json({
-      error: "phone is taken",
+      error: "email is taken",
     });
   }
   // id
