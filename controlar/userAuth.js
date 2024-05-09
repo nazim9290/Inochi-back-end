@@ -75,8 +75,8 @@ exports.BookSeminer= async(req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { phone, password } = req.body;
-    const user = await User.findOne({ email:phone });
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
     if (!user) {
       return res.json({
         error: "no user found",
