@@ -85,6 +85,7 @@ app.get("/", async (req, res) => {
     serverName: "Inochi Global Education Institute",
     "deveolper Name": "MD Nazim Uddin",
     developerEmail: "nazim9290@gmail.com",
+    "last commit ": "desin update",
   });
 });
 
