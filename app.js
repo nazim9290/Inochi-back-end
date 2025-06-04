@@ -11,25 +11,24 @@ const multer = require('multer');
 var Fingerprint = require("express-fingerprint");
 // const GridFsStorage=require("multer-grids-storage")
 const mongoose = require('mongoose');
-mongoose.connect('mongodb+srv://arefintalukder5:Arefin@cluster0.yrhgh55.mongodb.net/?retryWrites=true&w=majority', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+mongoose.connect(
+  "mongodb://inochi_new:zm8rW79icpnocwil@cluster0.yrhgh55.mongodb.net/InochiEducation?retryWrites=true&w=majority"
+);
 
 const db = mongoose.connection;
 
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
-db.once('open', () => {
-  console.log('Connected to MongoDB');
+db.on("error", console.error.bind(console, "MongoDB connection error:"));
+db.once("open", () => {
+  console.log("Connected to MongoDB");
 });
 const app = express();
-const port = 5000;
+const port = 8080;
 // const corsOptions = {
 //   origin: ['http://localhost:3000', "*",'http://localhost:5173','http://45.77.247.238:3000/',
 //   'http://45.77.247.238:5174/','http://45.77.247.238:5173/',
 //   'http://45.77.247.238:4173/',
 //   "*","http://bosboll.com/"],
-  
+
 //   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
 //   credentials: true, // enable set cookie
 //   optionsSuccessStatus: 204,
@@ -79,13 +78,14 @@ app.get("/fingerprint", (req, res) => {
 app.use(cors(corsOptions));
 // app.use(cors(corsOptionsadmin));
 
-app.get('/',async(req,res)=>{
+app.get("/", async (req, res) => {
   // console.log("every thing ok");
   res.json({
-    "serverName":"study app",
-  "deveolper Name":"Arefin Talukder",
-"developerEmail":"arefintalukder5@gmail.com"  })
-})
+    serverName: "Inochi Global Education Institute",
+    "deveolper Name": "MD Nazim Uddin",
+    developerEmail: "nazim9290@gmail.com",
+  });
+});
 
 // Set up multer storage
 
