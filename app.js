@@ -10,7 +10,11 @@ require("dotenv").config();
 const multer = require('multer');
 var Fingerprint = require("express-fingerprint");
 const app = express();
-const port = 8080;
+
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+const port = process.env.PORT || 8080;
 // const GridFsStorage=require("multer-grids-storage")
 const mongoose = require("mongoose");
 mongoose
@@ -86,11 +90,10 @@ app.get("/", async (req, res) => {
 
 // Set up multer storage
 
-
 // Body parser middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-const helmet = require('helmet');
+const helmet = require("helmet");
 app.use(helmet());
 // app.get('/api/getAllData', async (req, res) => {
 //   try {
@@ -103,45 +106,47 @@ app.use(helmet());
 //   }
 // });
 
-// 
-app.use('/api/', require('./route/userContactRoute'));
-app.use('/api',require("./route/subscriber"))
-app.use('/api',require("./route/blogRoute"));
-app.use('/api',require("./route/data.js"));
-app.use("/api",require("./route/questionRoute.js"))
-app.use('/api',require("./route/userRoute"));
+//
+app.use("/api/", require("./route/userContactRoute"));
+app.use("/api", require("./route/subscriber"));
+app.use("/api", require("./route/blogRoute"));
+app.use("/api", require("./route/data.js"));
+app.use("/api", require("./route/questionRoute.js"));
+app.use("/api", require("./route/userRoute"));
 
 const imageSchema = new mongoose.Schema({
   url: String,
   public_id: String,
 });
 
-
-
-const Image = mongoose.model('Image', imageSchema);
+const Image = mongoose.model("Image", imageSchema);
 // Set up multer for handling file uploads
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
-app.post('/api/upload', upload.single('image'), async (req, res) => {
+app.post("/api/upload", upload.single("image"), async (req, res) => {
   try {
     const newImage = new Image({
-      url: '',
+      url: "",
       public_id: shortid.generate(), // Generate a unique public_id
     });
 
     // Save the uploaded file to the database
-    newImage.url = 'data:image/png;base64,' + req.file.buffer.toString('base64');
+    newImage.url =
+      "data:image/png;base64," + req.file.buffer.toString("base64");
     await newImage.save();
 
-    res.status(201).json({ message: 'File uploaded successfully',public_id: newImage.public_id  });
+    res.status(201).json({
+      message: "File uploaded successfully",
+      public_id: newImage.public_id,
+    });
     console.log("success");
   } catch (error) {
-    res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
 // Define a route to get an image by public_id
-app.get('/api/images/:public_id', async (req, res) => {
+app.get("/api/images/:public_id", async (req, res) => {
   try {
     const { public_id } = req.params;
 
@@ -149,21 +154,19 @@ app.get('/api/images/:public_id', async (req, res) => {
     const image = await Image.findOne({ public_id });
 
     if (!image) {
-      return res.status(404).json({ message: 'Image not found' });
+      return res.status(404).json({ message: "Image not found" });
     }
 
     // Return the image data
     res.status(200).json({ url: image.url, public_id: image.public_id });
   } catch (error) {
-    console.error('Error fetching image:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
+    console.error("Error fetching image:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-
 app.use(cors());
 
 
