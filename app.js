@@ -9,20 +9,17 @@ const cors = require('cors');
 require("dotenv").config();
 const multer = require('multer');
 var Fingerprint = require("express-fingerprint");
-// const GridFsStorage=require("multer-grids-storage")
-const mongoose = require('mongoose');
-mongoose.connect(
-  "mongodb://inochi_new:zm8rW79icpnocwil@cluster0.yrhgh55.mongodb.net/InochiEducation?retryWrites=true&w=majority"
-);
-
-const db = mongoose.connection;
-
-db.on("error", console.error.bind(console, "MongoDB connection error:"));
-db.once("open", () => {
-  console.log("Connected to MongoDB");
-});
 const app = express();
 const port = 8080;
+// const GridFsStorage=require("multer-grids-storage")
+const mongoose = require("mongoose");
+mongoose
+  .connect(
+    `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.bug5j.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
+  )
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => console.error("MongoDB connection error:", err));
+
 // const corsOptions = {
 //   origin: ['http://localhost:3000', "*",'http://localhost:5173','http://45.77.247.238:3000/',
 //   'http://45.77.247.238:5174/','http://45.77.247.238:5173/',
