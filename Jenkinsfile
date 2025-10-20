@@ -8,7 +8,7 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
-        git branch: 'main', url: 'https://github.com/nazim9290/Inochi-back-end.git'
+        git branch: 'master', url: 'https://github.com/nazim9290/Inochi-back-end.git'
       }
     }
     stage('Build Docker Image') {
