@@ -1,49 +1,26 @@
-const mongoose =require("mongoose") 
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const { ObjectId } = mongoose.Schema;
-const PostQuestionSchema = new mongoose.Schema({
-    questionName: {
-        type: String,
-        required: true,
-        trim: true
+const Question = sequelize.define(
+  'Question',
+  {
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    questionName: { type: DataTypes.STRING, allowNull: false },
+    first: { type: DataTypes.STRING, allowNull: false },
+    second: { type: DataTypes.STRING, allowNull: false },
+    third: { type: DataTypes.STRING, allowNull: false },
+    answer: { type: DataTypes.STRING, allowNull: false },
+    category: { type: DataTypes.STRING, allowNull: false },
+    incorrectAnswer: {
+      type: DataTypes.JSONB,
+      field: 'incorrect_answer',
+      defaultValue: [],
     },
-    first:{
-            type: String,
-               required: true,
-               trim: true
-        },
-    second:{
-               type: String,
-               required: true,
-               trim: true
-           },
-    third:{
-               type: String,
-               required: true,
-               trim: true
-           },
-  
-           answer:{
-                type: String,
-                required: true,
-                trim: true
-           },
-           category:{
-                type: String,
-                required: true,
+  },
+  {
+    tableName: 'questions',
+    timestamps: true,
+  }
+);
 
-           },
-           incorrect_answer:[
-                        {
-                          
-                            type: String,
-                            required: true,
-
-                       },
-           ],
-        
-},{ timestamps: true })
-
-
-const Question=mongoose.model("Question",PostQuestionSchema );
-module.exports=Question;
+module.exports = Question;

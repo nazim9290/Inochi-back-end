@@ -1,23 +1,20 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const RpageData = new mongoose.Schema({
-    title:{
-        type:String
-        },
-        subtitile:{
-          type:String
-        },
-    Address: {
-    type: String,
+const Rpage = sequelize.define(
+  'Rpage',
+  {
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    title: { type: DataTypes.STRING },
+    subtitile: { type: DataTypes.STRING },
+    Address: { type: DataTypes.STRING },
+    Contactinfo: { type: DataTypes.STRING },
+    timeSchedule: { type: DataTypes.STRING, field: 'time_schedule' },
   },
-  Contactinfo: {
-    type: String,
-  },
-  timeSchedule:{
-    type:String
+  {
+    tableName: 'page_data',
+    timestamps: true,
   }
-});
-
-const Rpage = mongoose.model('pagedata', RpageData);
+);
 
 module.exports = Rpage;

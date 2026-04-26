@@ -1,14 +1,16 @@
-const mongoose = require('mongoose');
-const { Schema } = mongoose;
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-            
-const BrandSchema = new Schema(
+const Brand = sequelize.define(
+  'Brand',
   {
-    image: {
-    url: String,
-    public_id: String,
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    image: { type: DataTypes.JSONB, defaultValue: null },
   },
-}
+  {
+    tableName: 'brands',
+    timestamps: true,
+  }
 );
-module.exports = mongoose.model('Brand',BrandSchema);
 
+module.exports = Brand;

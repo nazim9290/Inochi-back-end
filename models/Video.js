@@ -1,24 +1,17 @@
-const mongoose = require('mongoose');
-const { Schema } = mongoose;
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-            
-const VideoSchema = new Schema(
+const Video = sequelize.define(
+  'Video',
   {
-    title: {
-      type: String,
-      trim: true,
-      required: true,
-      unique: true,
-
-    },
-    playlistTitle:{
-    type: String,
-    trim: true,
-    unique: true,
-
-  }
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    title: { type: DataTypes.STRING, allowNull: false, unique: true },
+    playlistTitle: { type: DataTypes.STRING, field: 'playlist_title', unique: true },
   },
-  { timestamps: true }
+  {
+    tableName: 'videos',
+    timestamps: true,
+  }
 );
-module.exports = mongoose.model('Video', VideoSchema);
 
+module.exports = Video;

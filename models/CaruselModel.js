@@ -1,29 +1,23 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const CaruselModelSchema = new mongoose.Schema({
-  title: {
-    type: String,
+const CaruselModel = sequelize.define(
+  'CaruselModel',
+  {
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    title: { type: DataTypes.STRING },
+    content: { type: DataTypes.TEXT },
+    image: { type: DataTypes.JSONB, defaultValue: null },
+    category: { type: DataTypes.STRING },
+    status: {
+      type: DataTypes.ENUM('draft', 'published'),
+      defaultValue: 'draft',
+    },
   },
-  content: {
-    type: String,
-  },
-  image: {
-    url: String,
-    public_id: String,
-  },
-  
-  category: {
-    type: String, // Assuming the category is a string, adjust the type as needed
-  },
-  
-  status: {
-    type: String,
-    enum: ['draft', 'published'], 
-    default: 'draft', // Default value is 'draft'
-  },
-  // Add other fields as needed
-});
-
-const CaruselModel = mongoose.model('CaruselModel', CaruselModelSchema);
+  {
+    tableName: 'carusels',
+    timestamps: true,
+  }
+);
 
 module.exports = CaruselModel;

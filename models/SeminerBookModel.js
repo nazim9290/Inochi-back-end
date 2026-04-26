@@ -1,29 +1,18 @@
-const mongoose = require('mongoose');
-const { Schema } = mongoose;
-const SeminerBookModel = new Schema(
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
+
+const SeminerBooking = sequelize.define(
+  'SeminerBooking',
   {
-    name: {
-      
-      type: String,
-      trim: true,
-      required: true,
-    },
-    email: {
-      type: String,
-      trim: true,
-      required: true,
-    },
-    phone: {
-      type: String,
-      trim: true,
-      required: true,
-    }
- 
-  
-    
-
-},
-  { timestamps: true }
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    name: { type: DataTypes.STRING, allowNull: false },
+    email: { type: DataTypes.STRING, allowNull: false },
+    phone: { type: DataTypes.STRING, allowNull: false },
+  },
+  {
+    tableName: 'seminer_bookings',
+    timestamps: true,
+  }
 );
-module.exports = mongoose.model('SeminerBooking', SeminerBookModel);
 
+module.exports = SeminerBooking;

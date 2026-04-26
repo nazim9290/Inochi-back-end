@@ -1,52 +1,33 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const blogSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true,
-  },
-  content: {
-    type: String,
-    required: true,
-  },
-  image: {
-    url: String,
-    public_id: String,
-  },
-  
-  category: {
-    type: String, // Assuming the category is a string, adjust the type as needed
-    required: true,
-  },
-  author: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User', // Reference to the User model
-    required: true,
-  },
-  status: {
-    type: String,
-    enum: ['draft', 'published'], 
-    default: 'draft', // Default value is 'draft'
-  },
-  tags: {
-    blogs: {
-      type: Boolean,
-      default: false,
+const Blog = sequelize.define(
+  'Blog',
+  {
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    title: { type: DataTypes.STRING, allowNull: false },
+    content: { type: DataTypes.TEXT, allowNull: false },
+    image: { type: DataTypes.JSONB, defaultValue: null },
+    category: { type: DataTypes.STRING, allowNull: false },
+    authorId: {
+      type: DataTypes.UUID,
+      field: 'author_id',
+      allowNull: false,
+      references: { model: 'users', key: 'id' },
     },
-    study: {
-      type: Boolean,
-      default: false,
+    status: {
+      type: DataTypes.ENUM('draft', 'published'),
+      defaultValue: 'draft',
     },
-    service: {
-      type: Boolean,
-      default: false,
+    tags: {
+      type: DataTypes.JSONB,
+      defaultValue: { blogs: false, study: false, service: false },
     },
   },
-  // Add other fields as needed
-},
-{ timestamps: true }
+  {
+    tableName: 'blogs',
+    timestamps: true,
+  }
 );
-
-const Blog = mongoose.model('Blog', blogSchema);
 
 module.exports = Blog;

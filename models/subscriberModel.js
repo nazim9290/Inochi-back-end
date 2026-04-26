@@ -1,15 +1,24 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const subscriberSchema = new mongoose.Schema({
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    lowercase: true,
+const Subscriber = sequelize.define(
+  'Subscriber',
+  {
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: { isEmail: true },
+      set(value) {
+        this.setDataValue('email', String(value).trim().toLowerCase());
+      },
+    },
   },
-});
-
-const Subscriber = mongoose.model('Subscriber', subscriberSchema);
+  {
+    tableName: 'subscribers',
+    timestamps: true,
+  }
+);
 
 module.exports = Subscriber;

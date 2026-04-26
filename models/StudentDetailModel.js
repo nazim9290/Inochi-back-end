@@ -1,34 +1,27 @@
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const StudentDetailsSchema = new Schema({
-  Lname: {
-    type: String,
+const StudentDetails = sequelize.define(
+  'StudentDetails',
+  {
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    Lname: { type: DataTypes.STRING },
+    userId: {
+      type: DataTypes.UUID,
+      field: 'user_id',
+      references: { model: 'users', key: 'id' },
+    },
+    Fname: { type: DataTypes.STRING },
+    address: { type: DataTypes.STRING },
+    classOf: { type: DataTypes.STRING, field: 'class_of' },
+    branch: { type: DataTypes.STRING },
+    studentId: { type: DataTypes.STRING, field: 'student_id' },
+    action: { type: DataTypes.STRING },
   },
-  user: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-  },
-  Fname: {
-    type: String,
-  },
-  address: {
-    type: String,
-  },
-  classOf: {
-    type: String,
-  },
-  branch: {
-    type: String,
-  },
-  studentId: {
-    type: String,
-  },
-  action: {
-    type: String,
-  },
-}, { timestamps: true });
-
-const StudentDetails = mongoose.model('StudentDetails', StudentDetailsSchema);
+  {
+    tableName: 'student_details',
+    timestamps: true,
+  }
+);
 
 module.exports = StudentDetails;

@@ -1,33 +1,20 @@
-const mongoose = require('mongoose');
-const { Schema } = mongoose;
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-            
-const SeminerSchema = new Schema(
+const Seminer = sequelize.define(
+  'Seminer',
   {
-    title: {
-      type: String,
-      trim: true,
-      required: true,
-    },
-    subtitle: {
-      type: String,
-      trim: true,
-    },
-    
-    image: {
-    url: String,
-    public_id: String,
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    title: { type: DataTypes.STRING, allowNull: false },
+    subtitle: { type: DataTypes.STRING },
+    image: { type: DataTypes.JSONB, defaultValue: null },
+    time: { type: DataTypes.STRING },
+    date: { type: DataTypes.STRING },
   },
-  time:{
-    type: String,
-    trim: true,
-  },
-  date:{
-    type: String,
-    trim: true,
+  {
+    tableName: 'seminers',
+    timestamps: true,
   }
-  },
-  { timestamps: true }
 );
-module.exports = mongoose.model('Seminer', SeminerSchema);
 
+module.exports = Seminer;

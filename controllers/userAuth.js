@@ -1,362 +1,218 @@
-const User = require("../models/userModel");
-const SeminerBookModel=require("../models/SeminerBookModel")
-const { hashPassword, comparePassword } = require("../helpers/auth")
-const jwt = require("jsonwebtoken")
-const StudentDetails = require("../models/StudentDetailModel")
-const mongoose = require('mongoose');
-const cloudinary = require("cloudinary")
+const jwt = require('jsonwebtoken');
+const cloudinary = require('cloudinary').v2;
+
+const { User, SeminerBooking, StudentDetails, sequelize } = require('../models');
+const { hashPassword, comparePassword } = require('../helpers/auth');
+
 cloudinary.config({
-  cloud_name: "arefintalukder5",
-  api_key: "622592679337996",
-  api_secret: "lQqwTTsKLLgm0F3_yasknj-jefg",
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
 exports.register = async (req, res) => {
-    console.log("REGISTER ENDPOINT => ", req.body);
-  const { name,email, password, phone } = req.body;
-  // validation
-  if (!name) {
-    return res.json({
-      error: "Name is required",
-    });
-  }
+  const { name, email, password, phone } = req.body;
+  if (!name) return res.json({ error: 'Name is required' });
   if (!password || password.length < 6) {
-    return res.json({
-      error: "Password is required and should be 6 characters long",
-    });
+    return res.json({ error: 'Password is required and should be 6 characters long' });
   }
 
-  const exist = await User.findOne({ email });
-  if (exist) {
-    return res.json({
-      error: "email is taken",
-    });
-  }
-  // id
-  const randomInteger = Math.floor(Math.random() * 10);
-  // console.log(randomInteger);
-  // hash password
-  const hashedPassword = await hashPassword(password);
-
-  const user = new User({
-    name,
-    password: hashedPassword,
-    phone: phone,
-    email:email
-  });
   try {
-    await user.save();
-    // console.log("REGISTERED USE => ", user);
-    return res.json({
-      ok: true,
-    });
+    if (email) {
+      const exists = await User.findOne({ where: { email } });
+      if (exists) return res.json({ error: 'email is taken' });
+    }
+
+    const hashedPassword = await hashPassword(password);
+    await User.create({ name, password: hashedPassword, phone, email });
+    return res.json({ ok: true });
   } catch (err) {
-    console.log("REGISTER FAILED => ", err);
-    return res.status(400).send("Error. Try again.");
+    console.error('REGISTER FAILED =>', err);
+    return res.status(400).send('Error. Try again.');
   }
 };
-exports.BookSeminer= async(req, res) => {
-  const { name, email, phone } = req.body;
 
-  const user = new SeminerBookModel({
-    name,
-    phone,
-    email 
-  });
-  console.log("test")
+exports.BookSeminer = async (req, res) => {
+  const { name, email, phone } = req.body;
   try {
-    await user.save();
-    return res.json({
-      ok: true,
-    });
+    await SeminerBooking.create({ name, phone, email });
+    return res.json({ ok: true });
   } catch (err) {
-    console.log("Bokking Seminer  FAILED => ", err);
-    return res.status(400).send("Error. Try again.");
+    console.error('Booking Seminer FAILED =>', err);
+    return res.status(400).send('Error. Try again.');
   }
 };
 
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.json({
-        error: "no user found",
-      });
-    }
-    // check password
+    const user = await User.findOne({ where: { email } });
+    if (!user) return res.json({ error: 'no user found' });
+
     const match = await comparePassword(password, user.password);
-    if (!match) {
-      return res.json({
-        error: "Wrong password",
-      });
-    }
-    // create signed token
-    const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
-    user.password = undefined;
-    res.json({
-      token,
-      user,
-    });
+    if (!match) return res.json({ error: 'Wrong password' });
+
+    const token = jwt.sign({ _id: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    const userData = user.toJSON();
+    delete userData.password;
+    res.json({ token, user: userData });
   } catch (err) {
-    console.log(err);
-    return res.status(400).send("Error. Try again.");
+    console.error('Login error:', err);
+    return res.status(400).send('Error. Try again.');
   }
 };
 
-
 exports.currentUser = async (req, res) => {
-  // console.log("test ")
   try {
-    const user = await User.findById(req.user._id);
-    // res.json(user);
+    const user = await User.findByPk(req.user._id || req.user.id);
+    if (!user) return res.sendStatus(404);
     res.json({ ok: true });
   } catch (err) {
-    console.log(err);
+    console.error('currentUser error:', err);
     res.sendStatus(400);
   }
 };
 
-
 exports.createStudentdetails = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
+  const transaction = await sequelize.transaction();
   try {
-    const {
-      fName,
-      lname,
-      address,
-      classOf,
-      branch,
-      studentId,
-      action,
-    } = req.body;
+    const { fName, lname, address, classOf, branch, studentId, action } = req.body;
+    const userId = req.params.id;
 
-    const user_id = req.params.id;
-    const user = await User.findById(user_id).session(session);
+    const user = await User.findByPk(userId, { transaction });
     if (!user) {
-      await session.abortTransaction();
-      session.endSession();
+      await transaction.rollback();
       return res.status(404).json({ error: 'User not found' });
     }
-    const studentDetails = new StudentDetails({
-      postedBy: user_id,
-      fName,
-      lName,
-      address,
-      classOf,
-      branch,
-      studentId,
-      action,
-    });
 
-    // Save the student details
-    await studentDetails.save({ session });
+    await StudentDetails.create(
+      {
+        userId,
+        Fname: fName,
+        Lname: lname,
+        address,
+        classOf,
+        branch,
+        studentId,
+        action,
+      },
+      { transaction }
+    );
 
-    // Optionally, update the user's details
-    user.Fname = fName;
-    user.Lname = lname;
-    user.address = address;
-    user.classOf = classOf;
-    user.branch = branch;
-    user.studentId = studentId;
-    user.action = action;
-
-    // Update the userDetails field in the User model
-    user.userDetails.push(studentDetails._id);
-    await user.save({ session });
-
-    await session.commitTransaction();
-    session.endSession();
-
+    await transaction.commit();
     res.status(201).json({ message: 'Student details created successfully' });
   } catch (error) {
+    await transaction.rollback();
     console.error('Error creating student details:', error);
-
-    await session.abortTransaction();
-    session.endSession();
-
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
-// GET route to fetch all student details
 exports.getAllStudents = async (req, res) => {
   try {
-    const allUser = await User.find()
-
+    const allUser = await User.findAll({
+      attributes: { exclude: ['password'] },
+      order: [['createdAt', 'DESC']],
+    });
     res.json({ allUser });
   } catch (error) {
-    console.error('Error fetching all users with student details:', error);
+    console.error('Error fetching all users:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
-
-
 
 exports.upDateProfile = async (req, res) => {
-  const userId = req.params.id;
-const rool=210
   try {
-    const user = await User.findById(userId); // Fix: Remove the curly braces around userId
+    const user = await User.findByPk(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Update user information
-    user.name = req.body.name;
-    user.email = req.body.email;
-    user.phone = req.body.phone;
-    user.father = req.body.father;
-    user.mother = req.body.mother;
-    user.paddress = req.body.paddress;
-    user.parent = req.body.permanent;
-    user.education = req.body.education;
-    user.image = req.body.image;
-   user.classrool=rool+1 
-    // Save the updated user document
+    Object.assign(user, {
+      name: req.body.name,
+      email: req.body.email,
+      phone: req.body.phone,
+      father: req.body.father,
+      mother: req.body.mother,
+      paddress: req.body.paddress,
+      parent: req.body.permanent,
+      education: req.body.education,
+      image: req.body.image,
+    });
     await user.save();
 
-    // Exclude the password from the response
-    user.password = undefined;
-
-    // Send a response indicating success
-    res.json({ message: 'Profile updated successfully', user });
+    const userData = user.toJSON();
+    delete userData.password;
+    res.json({ message: 'Profile updated successfully', user: userData });
   } catch (error) {
     console.error('Error updating profile:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
-exports.getBranchA = async (req, res) => {
-  try {
-    const gustUsers = await User.find({ branch: 'A' });
 
-    // Do something with gustUsers, for example, send them in the response
-    res.json(gustUsers);
+const findByBranch = (branch) => async (req, res) => {
+  try {
+    const users = await User.findAll({
+      where: { branch },
+      attributes: { exclude: ['password'] },
+    });
+    res.json(users);
   } catch (error) {
-    console.error(error);
+    console.error('Error fetching by branch:', error);
     res.status(500).send('Internal Server Error');
   }
 };
 
-exports.getBranchB = async (req, res) => {
+const findByRole = (role) => async (req, res) => {
   try {
-    const gustUsers = await User.find({ branch: 'B' });
-
-    // Do something with gustUsers, for example, send them in the response
-    res.json(gustUsers);
+    const users = await User.findAll({
+      where: { role },
+      attributes: { exclude: ['password'] },
+    });
+    res.json(users);
   } catch (error) {
-    console.error(error);
+    console.error('Error fetching by role:', error);
     res.status(500).send('Internal Server Error');
   }
 };
-exports.allFree = async (req, res) => {
-  try {
-    const gustUsers = await User.find({ role: 'gust' });
 
-    // Do something with gustUsers, for example, send them in the response
-    res.json(gustUsers);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Internal Server Error');
-  }
-};
-// user role change by admin
-exports.AllStudent=async (req, res) => {
-  try {
-    const gustUsers = await User.find({ role: 'student' });
+exports.getBranchA = findByBranch('A');
+exports.getBranchB = findByBranch('B');
+exports.allFree = findByRole('gust');
+exports.AllStudent = findByRole('student');
 
-    // Do something with gustUsers, for example, send them in the response
-    res.json(gustUsers);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Internal Server Error');
-  }
-};
 exports.userRole = async (req, res) => {
-  const userId = req.params.id;
-
   try {
-    const user = await User.findById(userId);
-    // console.log(req.body); // Check the entire request body
+    const user = await User.findByPk(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Update user information
-    if (req.body.role) {
-      user.role = req.body.role;
-    }
-
-    if (req.body.branch) {
-      user.branch = req.body.branch;
-    }
-
-    // Save the updated user document
+    if (req.body.role) user.role = req.body.role;
+    if (req.body.branch) user.branch = req.body.branch;
     await user.save();
 
-    // Exclude the password from the response
-    user.password = undefined;
-
-    // Send a response indicating success
-    res.json({ message: 'Profile updated successfully', user });
+    const userData = user.toJSON();
+    delete userData.password;
+    res.json({ message: 'Profile updated successfully', user: userData });
   } catch (error) {
     console.error('Error updating profile:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
-// exports.userRole = async (req, res) => {
-//   const userId = req.params.id;
-
-//   try {
-//     const user = await User.findById(userId);
-// console.log(req.body)
-//     if (!user) {
-//       return res.status(404).json({ error: 'User not found' });
-//     }
-
-//     // Update user information
-//     user.role = req.body.role; // Make sure to send the updated value from React
-    
-//     // Save the updated user document
-//     // await user.save();
-
-//     // Exclude the password from the response
-//     user.password = undefined;
-
-//     // Send a response indicating success
-//     res.json({ message: 'Profile updated successfully', user });
-//   } catch (error) {
-//     console.error('Error updating profile:', error);
-//     res.status(500).json({ error: 'Internal Server Error' });
-//   }
-// };
 exports.uploadImage = async (req, res) => {
-  // console.log("req files => ",req.files);
   try {
     const result = await cloudinary.uploader.upload(req.files.image.path);
-    // console.log("uploaded image url => ", result);
-    res.json({
-      url: result.secure_url,
-      public_id: result.public_id,
-    });
+    res.json({ url: result.secure_url, public_id: result.public_id });
   } catch (err) {
-    console.log(err);
+    console.error('Cloudinary upload error:', err);
+    res.status(500).json({ error: 'Upload failed' });
   }
 };
-exports.BookSeminerGet=async(req,res)=>{
-  try{
-      // Find all blogs with status 'draft'
-      const pendingSeminer = await SeminerBookModel.find()
-      
-  res.status(200).json({ pendingSeminer });
+
+exports.BookSeminerGet = async (req, res) => {
+  try {
+    const pendingSeminer = await SeminerBooking.findAll({ order: [['createdAt', 'DESC']] });
+    res.status(200).json({ pendingSeminer });
+  } catch (err) {
+    console.error('Error fetching seminer bookings:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
-  catch(err){
-    console.log("error")
-  }
-}
+};

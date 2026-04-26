@@ -1,24 +1,25 @@
-const mongoose = require("mongoose");
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const reviewSchema = new mongoose.Schema({
- 
- postedby:{
-  type: mongoose.Schema.ObjectId,
-  ref:"User"
- },
- 
-  review: {
-    type: String,
-    required: true,
+const Review = sequelize.define(
+  'Review',
+  {
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    postedby: {
+      type: DataTypes.UUID,
+      references: { model: 'users', key: 'id' },
+    },
+    review: { type: DataTypes.TEXT, allowNull: false },
+    status: {
+      type: DataTypes.ENUM('pending', 'approved'),
+      defaultValue: 'pending',
+      allowNull: false,
+    },
   },
-  status: {
-    type: String,
-    enum: ["pending", "approved"],
-    default: "pending", // Default status is pending
-    required: true,
-  },
-}, { timestamps: true });
-
-const Review = mongoose.model("Review", reviewSchema);
+  {
+    tableName: 'reviews',
+    timestamps: true,
+  }
+);
 
 module.exports = Review;

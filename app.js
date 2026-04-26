@@ -1,180 +1,103 @@
-const express = require('express');
-const fs = require('fs');
-const bodyParser = require('body-parser');
-const mysql = require('mysql2');
-const bcrypt = require('bcrypt');
-const shortid = require('shortid');
-const jwt = require('jsonwebtoken');
-const cors = require('cors');
-require("dotenv").config();
-const multer = require('multer');
-var Fingerprint = require("express-fingerprint");
-const app = express();
+require('dotenv').config();
 
-app.use(cors());
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const multer = require('multer');
+const Fingerprint = require('express-fingerprint');
+const { nanoid } = require('nanoid');
+
+const { sequelize, Image } = require('./models');
+
+const app = express();
+const port = process.env.PORT || 8080;
+
+// CORS — open by default; tighten via env if needed
+const corsOptions = { origin: '*' };
+app.use(cors(corsOptions));
+app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-const port = process.env.PORT || 8080;
-// const GridFsStorage=require("multer-grids-storage")
-const mongoose = require("mongoose");
-mongoose
-  .connect(
-    `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.bug5j.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
-  )
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB connection error:", err));
-
-// const corsOptions = {
-//   origin: ['http://localhost:3000', "*",'http://localhost:5173','http://45.77.247.238:3000/',
-//   'http://45.77.247.238:5174/','http://45.77.247.238:5173/',
-//   'http://45.77.247.238:4173/',
-//   "*","http://bosboll.com/"],
-
-//   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-//   credentials: true, // enable set cookie
-//   optionsSuccessStatus: 204,
-//   allowedHeaders: 'Content-Type, Authorization', // specify allowed headers
-//   exposedHeaders: 'Content-Disposition', // specify headers exposed to the client
-// };
-
-// Use the express-fingerprint middleware
-
 app.use(
   Fingerprint({
-    parameters: [
-      // Defaults
-      Fingerprint.useragent,
-      Fingerprint.acceptHeaders,
-      Fingerprint.geoip,
-    ],
+    parameters: [Fingerprint.useragent, Fingerprint.acceptHeaders, Fingerprint.geoip],
   })
 );
-const corsOptions = {
-  origin: "*",
-};
-app.use(cors(corsOptions));
 
-app.use(function (req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "X-Requested-With");
-  next();
-});
-
-// Endpoint to get device fingerprint
-app.get("/fingerprint", (req, res) => {
-  const fingerprint = req.fingerprint;
-  const clientIp = req.clientIp;
-  res.json({ fingerprint, clientIp });
-});
-
-// 1) GLOBAL MIDDLEWARES
-
-//Set security HTTP headers
-// const corsOptionsadmin = {
-//   origin: 'http://localhost:3000/', // replace with your frontend URL
-//   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-//   credentials: true, // enable set cookie
-//   optionsSuccessStatus: 204,
-// };
-app.use(cors(corsOptions));
-// app.use(cors(corsOptionsadmin));
-
-app.get("/", async (req, res) => {
-  // console.log("every thing ok");
+// Health
+app.get('/', (req, res) => {
   res.json({
-    serverName: "Inochi Global Education Institute",
-    "deveolper Name": "MD Nazim Uddin",
-    developerEmail: "nazim9290@gmail.com",
-    "last commit ": "desin update",
+    serverName: 'Inochi Global Education Institute',
+    status: 'ok',
   });
 });
 
-// Set up multer storage
-
-// Body parser middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-const helmet = require("helmet");
-app.use(helmet());
-// app.get('/api/getAllData', async (req, res) => {
-//   try {
-//     const data = await getAllData();
-//     console.log("data",data)
-//     res.status(200).json(data);
-//   } catch (error) {
-//     console.error('Error:', error);
-//     res.status(500).json({ error: 'Internal server error.', details: error.message });
-//   }
-// });
-
-//
-app.use("/api/", require("./routes/userContactRoute"));
-app.use("/api", require("./routes/subscriber"));
-app.use("/api", require("./routes/blogRoute"));
-app.use("/api", require("./routes/data.js"));
-app.use("/api", require("./routes/questionRoute.js"));
-app.use("/api", require("./routes/userRoute"));
-
-const imageSchema = new mongoose.Schema({
-  url: String,
-  public_id: String,
+app.get('/fingerprint', (req, res) => {
+  res.json({ fingerprint: req.fingerprint, clientIp: req.clientIp });
 });
 
-const Image = mongoose.model("Image", imageSchema);
-// Set up multer for handling file uploads
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
-app.post("/api/upload", upload.single("image"), async (req, res) => {
+// Routes
+app.use('/api', require('./routes/userContactRoute'));
+app.use('/api', require('./routes/subscriber'));
+app.use('/api', require('./routes/blogRoute'));
+app.use('/api', require('./routes/data'));
+app.use('/api', require('./routes/questionRoute'));
+app.use('/api', require('./routes/userRoute'));
+
+// Image upload (kept inline because it's a single endpoint pair)
+const upload = multer({ storage: multer.memoryStorage() });
+
+app.post('/api/upload', upload.single('image'), async (req, res) => {
   try {
-    const newImage = new Image({
-      url: "",
-      public_id: shortid.generate(), // Generate a unique public_id
-    });
-
-    // Save the uploaded file to the database
-    newImage.url =
-      "data:image/png;base64," + req.file.buffer.toString("base64");
-    await newImage.save();
-
-    res.status(201).json({
-      message: "File uploaded successfully",
-      public_id: newImage.public_id,
-    });
-    console.log("success");
+    const publicId = nanoid(10);
+    const url = 'data:image/png;base64,' + req.file.buffer.toString('base64');
+    await Image.create({ url, publicId });
+    res.status(201).json({ message: 'File uploaded successfully', public_id: publicId });
   } catch (error) {
-    res.status(500).json({ message: "Internal Server Error" });
+    console.error('Image upload error:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 });
 
-// Define a route to get an image by public_id
-app.get("/api/images/:public_id", async (req, res) => {
+app.get('/api/images/:public_id', async (req, res) => {
   try {
-    const { public_id } = req.params;
-
-    // Find the image in the database by public_id
-    const image = await Image.findOne({ public_id });
-
+    const image = await Image.findOne({ where: { publicId: req.params.public_id } });
     if (!image) {
-      return res.status(404).json({ message: "Image not found" });
+      return res.status(404).json({ message: 'Image not found' });
+    }
+    res.status(200).json({ url: image.url, public_id: image.publicId });
+  } catch (error) {
+    console.error('Error fetching image:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
+// 404
+app.use((req, res) => {
+  res.status(404).json({ message: 'Not found' });
+});
+
+// Error handler
+app.use((err, req, res, _next) => {
+  console.error(err);
+  res.status(err.status || 500).json({ message: err.message || 'Internal Server Error' });
+});
+
+(async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('PostgreSQL connected');
+
+    if (process.env.DB_SYNC === 'true') {
+      await sequelize.sync({ alter: true });
+      console.log('Schema synced (alter mode)');
     }
 
-    // Return the image data
-    res.status(200).json({ url: image.url, public_id: image.public_id });
-  } catch (error) {
-    console.error("Error fetching image:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    app.listen(port, () => {
+      console.log(`Server is running on http://localhost:${port}`);
+    });
+  } catch (err) {
+    console.error('Startup failed:', err);
+    process.exit(1);
   }
-});
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cors());
-
-
-// Example usage:
-
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-});
-
-
+})();

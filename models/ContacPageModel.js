@@ -1,18 +1,18 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const ContacPageSchema = new mongoose.Schema({
-  title: {
-    type: String,
+const ContacPage = sequelize.define(
+  'ContacPage',
+  {
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    title: { type: DataTypes.STRING },
+    content: { type: DataTypes.TEXT },
+    image: { type: DataTypes.JSONB, defaultValue: null },
   },
-  content: {
-    type: String,
-  },
-  image: {
-    url: String,
-    public_id: String,
+  {
+    tableName: 'contac_pages',
+    timestamps: true,
   }
-});
-
-const ContacPage = mongoose.model('ContacPage', ContacPageSchema);
+);
 
 module.exports = ContacPage;

@@ -1,45 +1,30 @@
-// models/team.js
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const mongoose = require('mongoose');
-
-const teamSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
+const Team = sequelize.define(
+  'Team',
+  {
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    name: { type: DataTypes.STRING, allowNull: false },
+    image: { type: DataTypes.JSONB, defaultValue: null },
+    facebook: { type: DataTypes.STRING },
+    twiter: { type: DataTypes.STRING },
+    email: { type: DataTypes.STRING },
+    position: { type: DataTypes.INTEGER },
+    linkdin: { type: DataTypes.STRING },
+    youtube: { type: DataTypes.STRING },
+    designation: { type: DataTypes.STRING, allowNull: false },
+    authorId: {
+      type: DataTypes.UUID,
+      field: 'author_id',
+      allowNull: false,
+      references: { model: 'users', key: 'id' },
+    },
   },
-  image: {
-    url: String,
-    public_id: String,
-  },
-  facebook: {
-    type: String,
-  },
-  twiter: {
-    type: String,
-  },
-  email: {
-    type: String,
-  },
-  position:{
-    type: Number,
-
-  },
-  linkdin: {
-    type: String,
-  },
-  youtube: {
-    type: String,
-  },
-  designation: {
-    type: String,
-    required: true
-  }, author: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User', // Reference to the User model
-    required: true,
-  },
-});
-
-const Team = mongoose.model('Team', teamSchema);
+  {
+    tableName: 'teams',
+    timestamps: true,
+  }
+);
 
 module.exports = Team;

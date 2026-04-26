@@ -1,18 +1,9 @@
-const Contact = require('../models/contactModel');
+const { Contact } = require('../models');
 
-
-// Insert contact into the database
 exports.contact = async (req, res) => {
   const { name, email, phone, msg } = req.body;
-
   try {
-    // Create a new contact instance
-    const newContact = new Contact({ name, email, phone, msg });
-
-    // Save the contact to the database;
-    console.log("success ");
-    await newContact.save();
-
+    await Contact.create({ name, email, phone, msg });
     return res.status(201).json({ message: 'Your message sent successfully' });
   } catch (error) {
     console.error('Error inserting contact:', error);
@@ -20,12 +11,9 @@ exports.contact = async (req, res) => {
   }
 };
 
-// Get all contacts
 exports.getAllContact = async (req, res) => {
   try {
-    // Get all contacts from the database
-    const contacts = await Contact.find();
-
+    const contacts = await Contact.findAll({ order: [['createdAt', 'DESC']] });
     return res.status(200).json({ contacts });
   } catch (error) {
     console.error('Error getting contacts:', error);
@@ -33,33 +21,24 @@ exports.getAllContact = async (req, res) => {
   }
 };
 
-// Update the status of the answer in the database
 exports.changeAnswerStatus = async (req, res) => {
   const { id } = req.params;
-
   try {
-    // Update the status of the answer
-    const updateResult = await Contact.updateOne({ _id: id }, { status: 'Answered' });
-
-    // Check if the update operation affected any documents
-    if (updateResult.nModified > 0) {
+    const [affected] = await Contact.update({ status: 'Answered' }, { where: { id } });
+    if (affected > 0) {
       return res.status(200).json({ message: 'Answer status updated successfully' });
-    } else {
-      return res.status(404).json({ error: 'Answer not found' });
     }
+    return res.status(404).json({ error: 'Answer not found' });
   } catch (error) {
     console.error('Error updating answer status:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
-// single content 
+
 exports.singleContact = async (req, res) => {
-  const { id } = req.params; // Use req.params to get the id from URL parameters
-
+  const { id } = req.params;
   try {
-    // Find a single contact by id in the database
-    const contact = await Contact.findById(id);
-
+    const contact = await Contact.findByPk(id);
     if (!contact) {
       return res.status(404).json({ error: 'Contact not found' });
     }
