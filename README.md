@@ -6,7 +6,7 @@ REST API for **Inochi Global Education Institute**. Powers the public site (`Ino
 
 - **Runtime:** Node.js ≥ 18 (CommonJS)
 - **Framework:** Express 4
-- **Database:** MongoDB via Mongoose 8 (migration to PostgreSQL in progress)
+- **Database:** PostgreSQL via Sequelize 6 (`pg` driver)
 - **Auth:** JWT (`jsonwebtoken`) + bcrypt
 - **Storage:** Cloudinary for media; multer for uploads
 - **Port:** 5000 (or `PORT` env var)
@@ -15,13 +15,14 @@ REST API for **Inochi Global Education Institute**. Powers the public site (`Ino
 
 ```
 .
-├── app.js                # express bootstrap, route mounting
-├── database.js           # (legacy MySQL pool, to be removed after Postgres migration)
+├── app.js                # express bootstrap, route mounting, sequelize.authenticate
+├── config/database.js    # Sequelize instance (reads DATABASE_URL or PG_* env vars)
 ├── controllers/          # request handlers
 ├── routes/               # route definitions
 ├── middleware/           # auth, admin, student guards
-├── models/               # Mongoose schemas
-└── helpers/              # bcrypt password helpers
+├── models/               # Sequelize models + index.js with associations
+├── helpers/              # bcrypt password helpers
+└── scripts/syncDb.js     # one-shot schema sync (`npm run db:sync`)
 ```
 
 ## Setup
@@ -44,8 +45,12 @@ See `.env.example` for the canonical list. Required:
 | Var | Purpose |
 |---|---|
 | `PORT` | HTTP port (default 8080 in code, 5000 in Docker) |
-| `DB_USER`, `DB_PASS` | MongoDB Atlas credentials (Postgres equivalents coming) |
+| `DATABASE_URL` | Single Postgres connection string (preferred) |
+| `PG_HOST` / `PG_PORT` / `PG_USER` / `PG_PASSWORD` / `PG_DATABASE` | Alternative to `DATABASE_URL` |
+| `PG_SSL` | `true` for managed providers requiring TLS |
+| `DB_SYNC` | `true` runs `sequelize.sync({ alter: true })` on startup (dev only) |
 | `JWT_SECRET` | HMAC secret for issuing/verifying JWTs |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Cloudinary credentials |
 
 ## Scripts
 
@@ -53,6 +58,7 @@ See `.env.example` for the canonical list. Required:
 |---|---|
 | `npm start` | Production: `node app.js` |
 | `npm run dev` | Development: nodemon with auto-restart |
+| `npm run db:sync` | Run `sequelize.sync()` once (`-- --force` to drop/recreate, `-- --alter` to alter) |
 | `npm run lint` | ESLint on the whole tree |
 | `npm run lint:fix` | ESLint with `--fix` |
 | `npm run format` | Prettier writes the whole tree |
