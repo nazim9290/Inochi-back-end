@@ -1,8 +1,3 @@
-
-const mongoose = require('mongoose');
-
-
-
 const express = require("express");
 const { requireAuth } = require("../middleware/auth")
 
