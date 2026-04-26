@@ -108,12 +108,12 @@ app.use(helmet());
 // });
 
 //
-app.use("/api/", require("./route/userContactRoute"));
-app.use("/api", require("./route/subscriber"));
-app.use("/api", require("./route/blogRoute"));
-app.use("/api", require("./route/data.js"));
-app.use("/api", require("./route/questionRoute.js"));
-app.use("/api", require("./route/userRoute"));
+app.use("/api/", require("./routes/userContactRoute"));
+app.use("/api", require("./routes/subscriber"));
+app.use("/api", require("./routes/blogRoute"));
+app.use("/api", require("./routes/data.js"));
+app.use("/api", require("./routes/questionRoute.js"));
+app.use("/api", require("./routes/userRoute"));
 
 const imageSchema = new mongoose.Schema({
   url: String,

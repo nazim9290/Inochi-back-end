@@ -1,6 +1,6 @@
 const User = require("../models/userModel");
 const SeminerBookModel=require("../models/SeminerBookModel")
-const { hashPassword, comparePassword } = require("../helper/auth")
+const { hashPassword, comparePassword } = require("../helpers/auth")
 const jwt = require("jsonwebtoken")
 const StudentDetails = require("../models/StudentDetailModel")
 const mongoose = require('mongoose');

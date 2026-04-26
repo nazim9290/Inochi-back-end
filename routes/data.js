@@ -4,9 +4,9 @@ const mongoose = require('mongoose');
 
 
 const express = require("express");
-const { requireAuth } = require("../midleware/auth")
+const { requireAuth } = require("../middleware/auth")
 
-const { checkAdmin } = require("../midleware/admin");
+const { checkAdmin } = require("../middleware/admin");
 const router = express.Router();
 
 // controllers
@@ -25,7 +25,7 @@ const { contacpageCreate,
      getAllBrand,
      deleteSingeBrandByID,
      
-} = require("../controlar/data.js");
+} = require("../controllers/data.js");
 
 // router.post("/homepage",HomePageCarusel);
 router.post("/contacpage", contacpageCreate)

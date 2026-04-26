@@ -1,7 +1,7 @@
 
 
-const { requireAuth } = require("../midleware/auth")
-const { checkAdmin } = require("../midleware/admin");
+const { requireAuth } = require("../middleware/auth")
+const { checkAdmin } = require("../middleware/admin");
 const express = require("express")
 const router = express.Router();
 // controllers
@@ -19,7 +19,7 @@ const { createBlog, allPublishedBlog,
         allPublishedBlogstudy,
         allPublishedBlogService,
         singleblogpublic,
-        CreateCarusel } = require("../controlar/blogControlar");
+        CreateCarusel } = require("../controllers/blogControlar");
 
 router.post("/create-blog", requireAuth, createBlog);
 router.get('/pending-blogs', requireAuth, checkAdmin, allPendingBlog);

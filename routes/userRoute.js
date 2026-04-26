@@ -1,8 +1,8 @@
 const express = require("express")
-const { requireAuth } = require("../midleware/auth")
+const { requireAuth } = require("../middleware/auth")
 const router = express.Router();
-const { checkAdmin } = require("../midleware/admin");
-const { checkStudent } = require("../midleware/student.js")
+const { checkAdmin } = require("../middleware/admin");
+const { checkStudent } = require("../middleware/student.js")
 // controllers
 const formidable = require("express-formidable")
 const { register, login, currentUser, createStudentdetails, getAllStudents,
@@ -12,7 +12,7 @@ const { register, login, currentUser, createStudentdetails, getAllStudents,
   getBranchA,
   getBranchB,
   BookSeminerGet
-} = require("../controlar/userAuth.js");
+} = require("../controllers/userAuth.js");
 router.post(
   "/upload-image-file",
   formidable({ maxFileSize: 5 * 1024 * 1024 }),

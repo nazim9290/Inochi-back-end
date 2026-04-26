@@ -1,4 +1,4 @@
-// midleware/auth.js
+// middleware/auth.js
 
 const { verify } = require('jsonwebtoken');
 const dotenv = require('dotenv');

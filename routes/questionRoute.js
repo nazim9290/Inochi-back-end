@@ -1,7 +1,7 @@
 const express = require("express");
-const { requireAuth } = require("../midleware/auth")
+const { requireAuth } = require("../middleware/auth")
 
-const { checkAdmin } = require("../midleware/admin");
+const { checkAdmin } = require("../middleware/admin");
 const {
     createQuestion,
     getAllQuestions,
@@ -16,7 +16,7 @@ const {
     getQuestionByFullOne,
     getQuestionByFullTwo
 }
-    = require('../controlar/questonControlar');
+    = require('../controllers/questonControlar');
 const router = express.Router();
 router.post("/create-question",requireAuth, checkAdmin,createQuestion);
 router.get("/get-all-question", getAllQuestions);
