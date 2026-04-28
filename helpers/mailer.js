@@ -142,6 +142,118 @@ exports.notifyBooking = ({ name, email, phone, date, time, seminar }) => {
   });
 };
 
+// EN: Friendly Bangla acknowledgement to the applicant the moment they submit.
+//     Reassures them the application reached us + sets reply expectation.
+// BN: Submit করার সাথে সাথে applicant-এর কাছে friendly Bangla acknowledgement।
+//     নিশ্চিত করে আবেদন পৌঁছেছে + reply timeline জানায়।
+exports.thankApplicant = (app) => {
+  if (!app?.email) return Promise.resolve({ sent: false, reason: 'no-email' });
+  const html = wrap(
+    'Application received',
+    `
+    <p>প্রিয় ${escapeHtml(app.fullName)},</p>
+    <p>আপনার আবেদন <strong>Inochi Global Education Institute</strong>-এ পৌঁছেছে। ✓</p>
+
+    <table cellpadding="6" cellspacing="0" style="width:100%;border-collapse:collapse;margin-top:14px">
+      <tr><td style="background:#f0fafc;font-weight:bold;width:140px;">Application ID</td><td style="background:#fff;border-bottom:1px solid #eee;font-family:monospace;font-size:12px;">${escapeHtml(app.id)}</td></tr>
+      <tr><td style="background:#f0fafc;font-weight:bold;">Target program</td><td style="background:#fff;border-bottom:1px solid #eee;">${escapeHtml(app.targetProgram || '—')}</td></tr>
+      <tr><td style="background:#f0fafc;font-weight:bold;">Target intake</td><td style="background:#fff;">${escapeHtml(app.targetIntake || '—')}</td></tr>
+    </table>
+
+    <p style="margin-top:18px">আমাদের counselor team আপনার সাথে <strong>১ business day-এর মধ্যে</strong> phone / email / WhatsApp-এ যোগাযোগ করবে।</p>
+    <p>জরুরি প্রশ্ন থাকলে এখনই WhatsApp-এ message দিতে পারেন আমাদের website-এর floating button থেকে।</p>
+
+    <p style="margin-top:22px">শুভকামনা,<br><strong>Inochi Global Education Institute</strong></p>
+    `
+  );
+  return send({
+    to: app.email,
+    subject: '✓ আপনার আবেদন পেয়েছি — Inochi Global Education',
+    html,
+  });
+};
+
+// EN: Status-change email to applicant. Bangla-led with English summary so
+//     parents / non-IT family members can also read it. Each status has its
+//     own tone — accepted is celebratory, rejected is warm, reviewing is calm.
+// BN: Applicant-কে status-change email। Bangla প্রধান + English summary —
+//     parent / non-IT family-ও পড়তে পারবে। প্রতি status-এর tone আলাদা —
+//     accepted celebratory, rejected warm, reviewing calm।
+exports.statusUpdateApplicant = (app, newStatus) => {
+  if (!app?.email) return Promise.resolve({ sent: false, reason: 'no-email' });
+
+  const COPY = {
+    reviewing: {
+      subject: '📋 আপনার আবেদনটি review হচ্ছে — Inochi',
+      title: 'Application under review',
+      icon: '📋',
+      heading: 'আপনার আবেদনটি এখন review হচ্ছে',
+      body: `আমাদের counselor team আপনার application দেখছে। কোনো অতিরিক্ত document বা তথ্যের দরকার হলে আমরা সরাসরি আপনার সাথে যোগাযোগ করব।`,
+      action: '',
+    },
+    accepted: {
+      subject: '🎉 অভিনন্দন! আপনার আবেদন accepted — Inochi',
+      title: 'Application ACCEPTED',
+      icon: '🎉',
+      heading: 'অভিনন্দন! আপনার আবেদন গ্রহণ করা হয়েছে',
+      body: `আপনার নথিপত্র এবং প্রোফাইল আমাদের admission team approved করেছে। পরবর্তী step (counseling, school selection, visa documentation) সম্পর্কে শীঘ্রই আমাদের counselor আপনার সাথে যোগাযোগ করবেন।`,
+      action: 'নিচের button ব্যবহার করে আমাদের office visit-এর জন্য schedule করতে পারেন:',
+    },
+    rejected: {
+      subject: 'আপনার আবেদন সম্পর্কে — Inochi Global Education',
+      title: 'Application update',
+      icon: 'ℹ️',
+      heading: 'এই মুহূর্তে আবেদনটি এগিয়ে নিতে পারছি না',
+      body: `আমরা আপনার আবেদন carefully দেখেছি। দুঃখিত, এই মুহূর্তে নির্বাচিত program-এর জন্য আবেদনটি এগিয়ে নেওয়া যাচ্ছে না। তবে এর মানে এই নয় যে ভবিষ্যতে সম্ভাবনা শেষ — যোগ্যতা, বছর, বা target program বদলে আবার চেষ্টা করতে পারেন। কারণ জানতে চাইলে নিচের button দিয়ে আমাদের সাথে কথা বলুন।`,
+      action: '',
+    },
+    withdrawn: {
+      subject: 'আপনার আবেদন withdrawn — Inochi',
+      title: 'Application withdrawn',
+      icon: '✖',
+      heading: 'আপনার আবেদন withdraw করা হয়েছে',
+      body: `আপনার অনুরোধ অনুযায়ী আবেদনটি withdraw করা হয়েছে। ভবিষ্যতে আবার আবেদন করতে চাইলে যেকোনো সময় আমাদের website-এ এসে পারেন।`,
+      action: '',
+    },
+  };
+
+  const conf = COPY[newStatus];
+  if (!conf) return Promise.resolve({ sent: false, reason: 'unknown-status' });
+
+  const html = wrap(
+    conf.title,
+    `
+    <p style="font-size:42px;margin:0 0 6px">${conf.icon}</p>
+    <h2 style="margin:0 0 10px;color:#0F2D52;">${escapeHtml(conf.heading)}</h2>
+    <p>প্রিয় ${escapeHtml(app.fullName)},</p>
+    <p>${escapeHtml(conf.body)}</p>
+
+    ${
+      newStatus === 'accepted'
+        ? `
+    <p style="margin-top:18px">${escapeHtml(conf.action)}</p>
+    <p style="margin-top:12px;text-align:center">
+      <a href="https://inochieducation.com/contact" style="display:inline-block;background:#29B5C4;color:#fff;padding:12px 26px;border-radius:8px;text-decoration:none;font-weight:bold">আমাদের সাথে যোগাযোগ করুন</a>
+    </p>`
+        : ''
+    }
+
+    <table cellpadding="6" cellspacing="0" style="width:100%;border-collapse:collapse;margin-top:18px">
+      <tr><td style="background:#f0fafc;font-weight:bold;width:140px;">Application ID</td><td style="background:#fff;border-bottom:1px solid #eee;font-family:monospace;font-size:12px;">${escapeHtml(app.id)}</td></tr>
+      <tr><td style="background:#f0fafc;font-weight:bold;">নতুন status</td><td style="background:#fff;text-transform:capitalize;">${escapeHtml(newStatus)}</td></tr>
+    </table>
+
+    <p style="margin-top:22px">শুভকামনা,<br><strong>Inochi Global Education Institute</strong></p>
+    `
+  );
+
+  return send({
+    to: app.email,
+    subject: conf.subject,
+    html,
+  });
+};
+
 exports.notifyApplication = (app) => {
   const html = wrap(
     'New student application',

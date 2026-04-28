@@ -27,6 +27,13 @@ exports.createApplication = async (req, res) => {
   }
   try {
     const app = await Application.create({ ...req.body, status: 'new' });
+    // EN: Friendly Bangla acknowledgement to the applicant — fires immediately
+    //     so they see "we got it" before they put the phone down. Non-blocking.
+    // BN: Applicant-কে friendly Bangla acknowledgement — সাথে সাথে fire,
+    //     তারা phone নামানোর আগেই "পেয়েছি" দেখে। Non-blocking।
+    if (typeof mailer.thankApplicant === 'function') {
+      mailer.thankApplicant(app).catch((e) => console.error('thankApplicant:', e));
+    }
     // EN: notifyApplication may not exist on older mailer setups — guard.
     // BN: পুরাতন mailer setup-এ notifyApplication নাও থাকতে পারে — guard।
     if (typeof mailer.notifyApplication === 'function') {
@@ -97,9 +104,17 @@ exports.updateApplication = async (req, res) => {
     const app = await Application.findByPk(req.params.id);
     if (!app) return res.status(404).json({ error: 'Application not found' });
     const patch = {};
+    let statusChanged = false;
     if (typeof req.body?.status === 'string') {
       if (!ALLOWED_STATUSES.includes(req.body.status)) {
         return res.status(400).json({ error: `Status must be one of ${ALLOWED_STATUSES.join(', ')}` });
+      }
+      // EN: Email the applicant only when the status actually moves — no
+      //     duplicate sends if admin just hits the same button twice.
+      // BN: Status আসলেই বদলালে তবেই applicant-কে email — admin একই button
+      //     দ্বিতীয়বার চাপলে duplicate send হবে না।
+      if (req.body.status !== app.status) {
+        statusChanged = true;
       }
       patch.status = req.body.status;
     }
@@ -107,6 +122,18 @@ exports.updateApplication = async (req, res) => {
       patch.adminNotes = req.body.adminNotes;
     }
     await app.update(patch);
+
+    // EN: Fire-and-forget the applicant notification AFTER we've successfully
+    //     persisted the new status — otherwise the email could promise a
+    //     state we never wrote.
+    // BN: নতুন status save হওয়ার পরই applicant-কে notify করি (fire-and-forget)
+    //     — না হলে email এমন state promise করত যা আমরা write করিনি।
+    if (statusChanged && typeof mailer.statusUpdateApplicant === 'function') {
+      mailer
+        .statusUpdateApplicant(app, patch.status)
+        .catch((e) => console.error('statusUpdateApplicant:', e));
+    }
+
     return res.status(200).json({ message: 'Application updated', application: app });
   } catch (err) {
     console.error('Error updating application:', err);
