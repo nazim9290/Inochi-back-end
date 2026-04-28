@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const cloudinary = require('cloudinary').v2;
 
 const { User, SeminerBooking, StudentDetails, sequelize } = require('../models');
+const mailer = require('../helpers/mailer');
 const { hashPassword, comparePassword } = require('../helpers/auth');
 
 cloudinary.config({
@@ -33,9 +34,12 @@ exports.register = async (req, res) => {
 };
 
 exports.BookSeminer = async (req, res) => {
-  const { name, email, phone } = req.body;
+  const { name, email, phone, date, time, seminar } = req.body;
   try {
     await SeminerBooking.create({ name, phone, email });
+    mailer
+      .notifyBooking({ name, email, phone, date, time, seminar })
+      .catch((e) => console.error('notifyBooking:', e));
     return res.json({ ok: true });
   } catch (err) {
     console.error('Booking Seminer FAILED =>', err);

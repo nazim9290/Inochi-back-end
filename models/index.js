@@ -18,6 +18,12 @@ const ContacPage = require('./ContacPageModel');
 const ImageTopCarousel = require('./imageTopCarousel');
 const Rpage = require('./pageData');
 const Image = require('./Image');
+const SiteSettings = require('./SiteSettings');
+const HowItWorksStep = require('./HowItWorksStep');
+const JlptCourse = require('./JlptCourse');
+const SuccessStory = require('./SuccessStory');
+const Faq = require('./Faq');
+const Branch = require('./Branch');
 
 // Associations
 User.hasMany(Blog, { foreignKey: 'authorId', as: 'blogs' });
@@ -52,4 +58,10 @@ module.exports = {
   ImageTopCarousel,
   Rpage,
   Image,
+  SiteSettings,
+  HowItWorksStep,
+  JlptCourse,
+  SuccessStory,
+  Faq,
+  Branch,
 };

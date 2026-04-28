@@ -124,12 +124,22 @@ exports.getTopCaruselImage = async (req, res) => {
 };
 
 exports.createTeam = async (req, res) => {
-  const { designation, position, name, image, facebook, twiter, email, linkdin, youtube } = req.body;
+  const {
+    designation, designationEn,
+    position,
+    name, nameEn,
+    bio, bioEn,
+    image, facebook, twiter, email, linkdin, youtube,
+  } = req.body;
   try {
     const team = await Team.create({
       name,
+      nameEn: nameEn || '',
       position,
       designation,
+      designationEn: designationEn || '',
+      bio: bio || '',
+      bioEn: bioEn || '',
       authorId: req.user._id || req.user.id,
       image,
       facebook,
@@ -142,6 +152,19 @@ exports.createTeam = async (req, res) => {
     res.status(201).json({ message: 'Team Member created successfully', team: populated });
   } catch (error) {
     console.error('Error creating team:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateTeam = async (req, res) => {
+  try {
+    const team = await Team.findByPk(req.params.id);
+    if (!team) return res.status(404).json({ error: 'Team member not found' });
+    await team.update(req.body || {});
+    const populated = await Team.findByPk(team.id, { include: [teamAuthorInclude] });
+    res.json({ message: 'Team member updated', team: populated });
+  } catch (error) {
+    console.error('Error updating team:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -201,12 +224,32 @@ exports.Review = async (req, res) => {
 };
 
 exports.createSeminar = async (req, res) => {
-  const { subtitle, title, image, time, date } = req.body;
+  const { subtitle, subtitleEn, title, titleEn, image, time, date } = req.body;
   try {
-    await Seminer.create({ title, subtitle, image, time, date });
+    await Seminer.create({
+      title,
+      titleEn: titleEn || '',
+      subtitle,
+      subtitleEn: subtitleEn || '',
+      image,
+      time,
+      date,
+    });
     res.status(201).json({ message: 'Seminer created successfully' });
   } catch (error) {
     console.error('Error creating Seminer:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateSeminar = async (req, res) => {
+  try {
+    const seminer = await Seminer.findByPk(req.params.id);
+    if (!seminer) return res.status(404).json({ error: 'Seminer not found' });
+    await seminer.update(req.body || {});
+    res.json({ message: 'Seminer updated', seminer });
+  } catch (error) {
+    console.error('Error updating seminer:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

@@ -5,7 +5,7 @@ const { checkAdmin } = require("../middleware/admin");
 const express = require("express")
 const router = express.Router();
 // controllers
-const { createBlog, allPublishedBlog,
+const { createBlog, updateBlog, allPublishedBlog,
         deleteBlogById,
         allPendingBlog,
         singleBlog,
@@ -19,9 +19,14 @@ const { createBlog, allPublishedBlog,
         allPublishedBlogstudy,
         allPublishedBlogService,
         singleblogpublic,
+        postBlogToFacebook,
+        checkFacebookConnection,
         CreateCarusel } = require("../controllers/blogControlar");
 
 router.post("/create-blog", requireAuth, createBlog);
+router.put("/update-blog/:id", requireAuth, checkAdmin, updateBlog);
+router.post("/blog/:id/post-to-facebook", requireAuth, checkAdmin, postBlogToFacebook);
+router.get("/facebook/check", requireAuth, checkAdmin, checkFacebookConnection);
 router.get('/pending-blogs', requireAuth, checkAdmin, allPendingBlog);
 router.get('/blog/:id', requireAuth, checkAdmin, singleBlog);
 router.delete('/blog/:id', requireAuth, checkAdmin, deleteBlogById);

@@ -1,4 +1,5 @@
 const { Subscriber } = require('../models');
+const mailer = require('../helpers/mailer');
 
 exports.subscriber = async (req, res) => {
   const { email } = req.body;
@@ -8,6 +9,7 @@ exports.subscriber = async (req, res) => {
       return res.status(409).json({ error: 'Subscriber with this email already exists' });
     }
     await Subscriber.create({ email });
+    mailer.notifySubscriber({ email }).catch((e) => console.error('notifySubscriber:', e));
     return res.status(201).json({ message: 'Subscriber added successfully' });
   } catch (error) {
     console.error('Error adding subscriber:', error);

@@ -8,10 +8,12 @@ const router = express.Router();
 const { contacpageCreate,
      contacpageData,
      createTeam,
+     updateTeam,
      allTeam,
      deleteSingeteam,
      ReviewCreate, Review
      , createSeminar,
+     updateSeminar,
      allSeminer,
      deleteSingeSeminer,
      AddVideoPlaylist,
@@ -19,19 +21,21 @@ const { contacpageCreate,
      AllBrand,
      getAllBrand,
      deleteSingeBrandByID,
-     
+
 } = require("../controllers/data.js");
 
 // router.post("/homepage",HomePageCarusel);
 router.post("/contacpage", contacpageCreate)
 router.get("/conctact-page", contacpageData);
 router.post("/team-create", requireAuth, checkAdmin, createTeam);
+router.put("/team-member-update/:id", requireAuth, checkAdmin, updateTeam);
 router.get("/team-member", allTeam);
 router.delete("/team-member-delete/:_id", requireAuth, checkAdmin, deleteSingeteam);
 router.post("//create-review", requireAuth, ReviewCreate);
 router.get("/review", Review);
 // sesion create:
 router.post("/seminar-create", requireAuth, checkAdmin, createSeminar);
+router.put("/seminar-update/:id", requireAuth, checkAdmin, updateSeminar);
 router.get("/seminar", allSeminer);
 router.delete("/seminar-delete/:_id", requireAuth, checkAdmin, deleteSingeSeminer);
 // video add

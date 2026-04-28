@@ -1,4 +1,24 @@
 const { Blog, CaruselModel, User } = require('../models');
+const facebook = require('../helpers/facebook');
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://inochieducation.com';
+
+// Strip HTML, collapse whitespace, cap to N chars — used for FB post summaries.
+const summarise = (html, n = 240) => {
+  const text = String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (text.length <= n) return text;
+  return text.slice(0, n).replace(/\s+\S*$/, '') + '…';
+};
+
+const buildFbPayload = (blog) => {
+  const id = blog.id || blog._id;
+  return {
+    title: blog.title || '',
+    summary: summarise(blog.content || ''),
+    blogUrl: `${SITE_URL}/bn/post/${id}`,
+    imageUrl: blog.image?.url,
+  };
+};
 
 const authorInclude = {
   model: User,
@@ -7,22 +27,49 @@ const authorInclude = {
 };
 
 exports.createBlog = async (req, res) => {
-  const { title, content, image, category } = req.body;
+  const { title, titleEn, content, contentEn, image, category, categoryEn } = req.body;
   if (!category) {
     return res.status(400).json({ error: 'Category is required.' });
   }
   try {
     const blog = await Blog.create({
       title,
+      titleEn: titleEn || '',
       content,
+      contentEn: contentEn || '',
       image,
       category,
+      categoryEn: categoryEn || '',
       authorId: req.user._id || req.user.id,
     });
     const populated = await Blog.findByPk(blog.id, { include: [authorInclude] });
     res.status(201).json({ message: 'Blog created successfully', blog: populated });
   } catch (error) {
     console.error('Error creating blog:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateBlog = async (req, res) => {
+  try {
+    const blog = await Blog.findByPk(req.params.id);
+    if (!blog) return res.status(404).json({ error: 'Blog not found' });
+    const { title, titleEn, content, contentEn, image, category, categoryEn, status, tags } = req.body;
+    await blog.update({
+      ...(title !== undefined && { title }),
+      ...(titleEn !== undefined && { titleEn }),
+      ...(content !== undefined && { content }),
+      ...(contentEn !== undefined && { contentEn }),
+      ...(image !== undefined && { image }),
+      ...(category !== undefined && { category }),
+      ...(categoryEn !== undefined && { categoryEn }),
+      ...(status !== undefined && { status }),
+      ...(tags !== undefined && { tags }),
+    });
+    const populated = await Blog.findByPk(blog.id, { include: [authorInclude] });
+    res.json({ message: 'Blog updated', blog: populated });
+  } catch (error) {
+    console.error('Error updating blog:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -46,13 +93,43 @@ exports.singleBlog = async (req, res) => {
   try {
     const blog = await Blog.findByPk(id);
     if (!blog) return res.status(404).json({ error: 'Blog not found' });
+    const wasDraft = blog.status !== 'published';
     blog.status = 'published';
     await blog.save();
+
+    // On first publish, fire-and-forget Facebook auto-post.
+    if (wasDraft) {
+      facebook.postBlogToPage(buildFbPayload(blog)).then((r) => {
+        if (r.ok) console.log(`FB auto-post: ${r.postId}`);
+        else console.log('FB auto-post skipped:', r.reason);
+      });
+    }
     res.status(200).json({ message: 'Blog published successfully', blog });
   } catch (error) {
     console.error('Error updating blog status:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
+};
+
+// Manual FB post — admin can re-share a blog any time. Bypasses the auto-post
+// toggle so they can hand-pick which posts go to Facebook.
+exports.postBlogToFacebook = async (req, res) => {
+  try {
+    const blog = await Blog.findByPk(req.params.id);
+    if (!blog) return res.status(404).json({ error: 'Blog not found' });
+    const result = await facebook.postManually(buildFbPayload(blog));
+    if (!result.ok) return res.status(502).json({ error: result.reason });
+    res.json({ message: 'Posted to Facebook', postId: result.postId });
+  } catch (err) {
+    console.error('Manual FB post failed:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.checkFacebookConnection = async (req, res) => {
+  const result = await facebook.checkToken();
+  if (!result.ok) return res.status(502).json({ ok: false, reason: result.reason });
+  res.json({ ok: true, page: result.page });
 };
 
 exports.singleblogpublic = async (req, res) => {
@@ -72,9 +149,17 @@ exports.singlgleBlogTags = async (req, res) => {
     if (!blog) {
       return res.status(404).json({ success: false, message: 'Blog not found' });
     }
+    const wasDraft = blog.status !== 'published';
     blog.tags = tags;
     if (status) blog.status = status;
     await blog.save();
+
+    if (wasDraft && blog.status === 'published') {
+      facebook.postBlogToPage(buildFbPayload(blog)).then((r) => {
+        if (r.ok) console.log(`FB auto-post: ${r.postId}`);
+        else console.log('FB auto-post skipped:', r.reason);
+      });
+    }
     res.json({ success: true, message: 'Blog approved successfully', blog });
   } catch (err) {
     console.error(err);

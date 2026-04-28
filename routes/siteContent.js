@@ -1,0 +1,39 @@
+const express = require('express');
+const { requireAuth } = require('../middleware/auth');
+const { checkAdmin } = require('../middleware/admin');
+const c = require('../controllers/siteContent');
+
+const router = express.Router();
+
+// Public reads
+router.get('/site-settings', c.getSiteSettings);
+router.get('/how-it-works', c.listSteps);
+router.get('/jlpt-courses', c.listCourses);
+router.get('/success-stories', c.listStories);
+router.get('/faqs', c.listFaqs);
+router.get('/branches', c.listBranches);
+
+// Admin writes
+router.put('/site-settings', requireAuth, checkAdmin, c.updateSiteSettings);
+
+router.post('/how-it-works', requireAuth, checkAdmin, c.createStep);
+router.put('/how-it-works/:id', requireAuth, checkAdmin, c.updateStep);
+router.delete('/how-it-works/:id', requireAuth, checkAdmin, c.deleteStep);
+
+router.post('/jlpt-courses', requireAuth, checkAdmin, c.createCourse);
+router.put('/jlpt-courses/:id', requireAuth, checkAdmin, c.updateCourse);
+router.delete('/jlpt-courses/:id', requireAuth, checkAdmin, c.deleteCourse);
+
+router.post('/success-stories', requireAuth, checkAdmin, c.createStory);
+router.put('/success-stories/:id', requireAuth, checkAdmin, c.updateStory);
+router.delete('/success-stories/:id', requireAuth, checkAdmin, c.deleteStory);
+
+router.post('/faqs', requireAuth, checkAdmin, c.createFaq);
+router.put('/faqs/:id', requireAuth, checkAdmin, c.updateFaq);
+router.delete('/faqs/:id', requireAuth, checkAdmin, c.deleteFaq);
+
+router.post('/branches', requireAuth, checkAdmin, c.createBranch);
+router.put('/branches/:id', requireAuth, checkAdmin, c.updateBranch);
+router.delete('/branches/:id', requireAuth, checkAdmin, c.deleteBranch);
+
+module.exports = router;

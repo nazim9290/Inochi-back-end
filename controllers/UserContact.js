@@ -1,9 +1,13 @@
 const { Contact } = require('../models');
+const mailer = require('../helpers/mailer');
 
 exports.contact = async (req, res) => {
   const { name, email, phone, msg } = req.body;
   try {
     await Contact.create({ name, email, phone, msg });
+    // Fire-and-forget — never let mail failures block the form submit.
+    mailer.notifyContact({ name, email, phone, msg }).catch((e) => console.error('notifyContact:', e));
+    if (email) mailer.thankContact({ name, email }).catch((e) => console.error('thankContact:', e));
     return res.status(201).json({ message: 'Your message sent successfully' });
   } catch (error) {
     console.error('Error inserting contact:', error);

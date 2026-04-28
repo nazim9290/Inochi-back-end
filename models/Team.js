@@ -6,6 +6,7 @@ const Team = sequelize.define(
   {
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     name: { type: DataTypes.STRING, allowNull: false },
+    nameEn: { type: DataTypes.STRING, defaultValue: '' },
     image: { type: DataTypes.JSONB, defaultValue: null },
     facebook: { type: DataTypes.STRING },
     twiter: { type: DataTypes.STRING },
@@ -14,6 +15,9 @@ const Team = sequelize.define(
     linkdin: { type: DataTypes.STRING },
     youtube: { type: DataTypes.STRING },
     designation: { type: DataTypes.STRING, allowNull: false },
+    designationEn: { type: DataTypes.STRING, defaultValue: '' },
+    bio: { type: DataTypes.TEXT, defaultValue: '' },
+    bioEn: { type: DataTypes.TEXT, defaultValue: '' },
     authorId: {
       type: DataTypes.UUID,
       field: 'author_id',
