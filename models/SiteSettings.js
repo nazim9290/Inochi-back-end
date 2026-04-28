@@ -85,6 +85,16 @@ const SiteSettings = sequelize.define(
     gaTrackingId: { type: DataTypes.STRING, defaultValue: '' },
     googleSiteVerification: { type: DataTypes.STRING, defaultValue: '' },
     googleTagManagerId: { type: DataTypes.STRING, defaultValue: '' },
+
+    // SEO / meta — admin-overridable defaults that show in browser tab,
+    // search results, and social share cards. Empty fields fall back to
+    // built-in translations / hardcoded site name.
+    siteTitle: { type: DataTypes.STRING(200), defaultValue: '' },
+    siteTitleEn: { type: DataTypes.STRING(200), defaultValue: '' },
+    siteDescription: { type: DataTypes.TEXT, defaultValue: '' },
+    siteDescriptionEn: { type: DataTypes.TEXT, defaultValue: '' },
+    metaKeywords: { type: DataTypes.TEXT, defaultValue: '' }, // CSV: "japan study,jlpt,..."
+    ogImageUrl: { type: DataTypes.STRING(500), defaultValue: '' }, // 1200x630 social card
   },
   {
     tableName: 'site_settings',
