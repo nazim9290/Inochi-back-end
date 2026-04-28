@@ -296,10 +296,11 @@ exports.getAllPlaylist = async (req, res) => {
   }
 };
 
+// EN: Create a brand row from the full payload (image + name + meta).
+// BN: পূর্ণ payload (image + name + meta) থেকে brand row তৈরি।
 exports.AllBrand = async (req, res) => {
-  const { image } = req.body;
   try {
-    const brand = await Brand.create({ image });
+    const brand = await Brand.create(req.body);
     res.status(201).json({ message: 'Brand created successfully', brand });
   } catch (error) {
     console.error('Error creating brand:', error);
@@ -307,12 +308,34 @@ exports.AllBrand = async (req, res) => {
   }
 };
 
+// EN: Public list — published only by default; admin passes ?all=true.
+//     Order: sortOrder ASC, then newest first as the tiebreaker.
+// BN: Public list — শুধু published default-এ; admin ?all=true দিতে পারে।
+//     Order: sortOrder ASC, তারপর newest first।
 exports.getAllBrand = async (req, res) => {
   try {
-    const brand = await Brand.findAll({ order: [['createdAt', 'DESC']] });
+    const where = req.query.all === 'true' ? {} : { published: true };
+    const brand = await Brand.findAll({
+      where,
+      order: [['sortOrder', 'ASC'], ['createdAt', 'DESC']],
+    });
     res.status(200).json({ brand });
   } catch (error) {
     console.error('Error getting brands:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// EN: Update a brand — used when admin re-uploads logo or edits name/url/etc.
+// BN: Brand update — admin logo re-upload অথবা name/url etc. edit করলে।
+exports.updateBrand = async (req, res) => {
+  try {
+    const brand = await Brand.findByPk(req.params.id);
+    if (!brand) return res.status(404).json({ error: 'Brand not found' });
+    await brand.update(req.body);
+    res.status(200).json({ message: 'Brand updated successfully', brand });
+  } catch (error) {
+    console.error('Error updating brand:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

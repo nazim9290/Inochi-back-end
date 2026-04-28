@@ -20,6 +20,7 @@ const { contacpageCreate,
      getAllPlaylist,
      AllBrand,
      getAllBrand,
+     updateBrand,
      deleteSingeBrandByID,
 
 } = require("../controllers/data.js");
@@ -41,7 +42,13 @@ router.delete("/seminar-delete/:_id", requireAuth, checkAdmin, deleteSingeSemine
 // video add
 router.post("/add-video", requireAuth, checkAdmin,AddVideoPlaylist);
 router.get("/video-playlist",getAllPlaylist);
-router.post("/brand",requireAuth, checkAdmin,AllBrand);
-router.get("/all-brand",getAllBrand)
-router.delete("/brand-delete/:is",requireAuth, checkAdmin,deleteSingeBrandByID)
+// EN: Brand (partner school) CRUD. Old DELETE used a typo ":is" — kept here
+//     in case any cached client still hits it, but the new ":id" form is canonical.
+// BN: Brand (partner school) CRUD। পুরাতন DELETE-এ typo ":is" ছিল — cached
+//     client থাকলে কাজ করার জন্য রাখা, কিন্তু নতুন ":id" form-ই canonical।
+router.post("/brand", requireAuth, checkAdmin, AllBrand);
+router.get("/all-brand", getAllBrand);
+router.put("/brand/:id", requireAuth, checkAdmin, updateBrand);
+router.delete("/brand/:id", requireAuth, checkAdmin, deleteSingeBrandByID);
+router.delete("/brand-delete/:id", requireAuth, checkAdmin, deleteSingeBrandByID);
 module.exports = router;
