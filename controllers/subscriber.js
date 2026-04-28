@@ -26,3 +26,19 @@ exports.Allsubscriber = async (req, res) => {
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
+// EN: Delete a subscriber. Used by admin to remove bounced / unsubscribed
+//     emails. Idempotent — 404 when nothing matched so the UI knows.
+// BN: Subscriber delete — bounced / unsubscribed email admin সরাতে পারে।
+//     Match না করলে 404, UI বুঝতে পারে।
+exports.deleteSubscriber = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deleted = await Subscriber.destroy({ where: { id } });
+    if (!deleted) return res.status(404).json({ error: 'Subscriber not found' });
+    return res.status(200).json({ message: 'Subscriber deleted' });
+  } catch (error) {
+    console.error('Error deleting subscriber:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};

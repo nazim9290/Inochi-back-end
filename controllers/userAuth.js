@@ -220,3 +220,19 @@ exports.BookSeminerGet = async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
+// EN: Delete a seminar booking — admin uses this once attendance is recorded
+//     elsewhere or the entry is a duplicate / spam.
+// BN: Seminar booking delete — attendance অন্যত্র record হলে অথবা duplicate /
+//     spam হলে admin ব্যবহার করে।
+exports.deleteBookSeminer = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deleted = await SeminerBooking.destroy({ where: { id } });
+    if (!deleted) return res.status(404).json({ error: 'Booking not found' });
+    res.status(200).json({ message: 'Booking deleted' });
+  } catch (err) {
+    console.error('Error deleting seminer booking:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};

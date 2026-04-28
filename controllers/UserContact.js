@@ -52,3 +52,19 @@ exports.singleContact = async (req, res) => {
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
+// EN: Hard delete a contact row — admin uses this to clear spam / processed
+//     entries. No soft-delete column on the model, so this is permanent.
+// BN: Contact row hard delete — spam / processed entry সরাতে admin ব্যবহার
+//     করে। Model-এ soft-delete column নেই, তাই এটা permanent।
+exports.deleteContact = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deleted = await Contact.destroy({ where: { id } });
+    if (!deleted) return res.status(404).json({ error: 'Contact not found' });
+    return res.status(200).json({ message: 'Contact deleted' });
+  } catch (error) {
+    console.error('Error deleting contact:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};

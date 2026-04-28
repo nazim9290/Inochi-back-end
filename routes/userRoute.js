@@ -11,7 +11,8 @@ const { register, login, currentUser, createStudentdetails, getAllStudents,
   BookSeminer,
   getBranchA,
   getBranchB,
-  BookSeminerGet
+  BookSeminerGet,
+  deleteBookSeminer,
 } = require("../controllers/userAuth.js");
 router.post(
   "/upload-image-file",
@@ -31,7 +32,8 @@ router.get("/all-guset", requireAuth, checkAdmin, allFree);
 router.get("/all-students", requireAuth, checkAdmin, AllStudent);
 router.get("/all-students/brancha", requireAuth, checkAdmin, getBranchA);
 router.get("/all-students/branchb", requireAuth, checkAdmin, getBranchB);
-router.get("/all-seminer-booking", BookSeminerGet)
+router.get("/all-seminer-booking", requireAuth, checkAdmin, BookSeminerGet);
+router.delete("/seminer-book/:id", requireAuth, checkAdmin, deleteBookSeminer);
 router.put("/profile-update/:id", upDateProfile);
 router.put("/change-role/:id", requireAuth, checkAdmin, userRole);
 module.exports = router;
