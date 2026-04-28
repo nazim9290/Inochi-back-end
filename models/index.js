@@ -24,6 +24,7 @@ const JlptCourse = require('./JlptCourse');
 const SuccessStory = require('./SuccessStory');
 const Faq = require('./Faq');
 const Branch = require('./Branch');
+const Application = require('./Application');
 
 // Associations
 User.hasMany(Blog, { foreignKey: 'authorId', as: 'blogs' });
@@ -64,4 +65,5 @@ module.exports = {
   SuccessStory,
   Faq,
   Branch,
+  Application,
 };

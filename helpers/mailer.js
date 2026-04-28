@@ -142,6 +142,32 @@ exports.notifyBooking = ({ name, email, phone, date, time, seminar }) => {
   });
 };
 
+exports.notifyApplication = (app) => {
+  const html = wrap(
+    'New student application',
+    `
+    <p style="margin-top:0"><strong>A new application has been submitted via /apply.</strong></p>
+    <table cellpadding="6" cellspacing="0" style="width:100%;border-collapse:collapse;">
+      <tr><td style="background:#f0fafc;font-weight:bold;width:140px;">Name</td><td style="background:#fff;border-bottom:1px solid #eee;">${escapeHtml(app.fullName)}</td></tr>
+      <tr><td style="background:#f0fafc;font-weight:bold;">Email</td><td style="background:#fff;border-bottom:1px solid #eee;"><a href="mailto:${escapeHtml(app.email)}" style="color:#29B5C4">${escapeHtml(app.email)}</a></td></tr>
+      <tr><td style="background:#f0fafc;font-weight:bold;">Phone</td><td style="background:#fff;border-bottom:1px solid #eee;">${escapeHtml(app.phone)}</td></tr>
+      <tr><td style="background:#f0fafc;font-weight:bold;">Education</td><td style="background:#fff;border-bottom:1px solid #eee;">${escapeHtml(app.highestEducation)} ${app.passingYear ? `(${app.passingYear})` : ''} ${app.gpaOrGrade ? `· ${escapeHtml(app.gpaOrGrade)}` : ''}</td></tr>
+      <tr><td style="background:#f0fafc;font-weight:bold;">Target program</td><td style="background:#fff;border-bottom:1px solid #eee;">${escapeHtml(app.targetProgram)} · ${escapeHtml(app.targetIntake)}</td></tr>
+      <tr><td style="background:#f0fafc;font-weight:bold;">JLPT level</td><td style="background:#fff;border-bottom:1px solid #eee;">${escapeHtml(app.jlptLevel)}</td></tr>
+      <tr><td style="background:#f0fafc;font-weight:bold;">Sponsor</td><td style="background:#fff;border-bottom:1px solid #eee;">${escapeHtml(app.sponsor)}</td></tr>
+      ${app.notes ? `<tr><td style="background:#f0fafc;font-weight:bold;vertical-align:top">Notes</td><td style="background:#fff;">${escapeHtml(app.notes)}</td></tr>` : ''}
+    </table>
+    <p style="margin-top:18px;font-size:12px;color:#94a3b8">Open the admin panel to review documents and update status.</p>
+    `
+  );
+  return send({
+    to: adminAddress(),
+    subject: `[Application] ${app.fullName} — ${app.targetProgram || 'program?'}`,
+    html,
+    replyTo: app.email,
+  });
+};
+
 exports.notifySubscriber = ({ email }) => {
   const html = wrap(
     'New newsletter subscriber',
