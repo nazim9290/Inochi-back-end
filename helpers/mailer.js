@@ -63,13 +63,14 @@ const escapeHtml = (s) =>
 // Send a generic mail. Resolves with `{sent:true}` on success or
 // `{sent:false, reason}` so callers can stay non-blocking — a missing SMTP
 // config should NOT make the contact form fail.
-const send = async ({ to, subject, html, replyTo }) => {
+const send = async ({ to, subject, html, replyTo, bcc }) => {
   const transporter = buildTransporter();
   if (!transporter) return { sent: false, reason: 'smtp-not-configured' };
   try {
     await transporter.sendMail({
       from: fromAddress(),
       to,
+      bcc,
       subject,
       html,
       replyTo,
@@ -291,6 +292,46 @@ exports.notifySubscriber = ({ email }) => {
     subject: `[Newsletter] new subscriber — ${email}`,
     html,
   });
+};
+
+// EN: Mass-send a newsletter to a list of subscriber emails. Chunks into
+//     BCC batches so a single send doesn't blow past per-message recipient
+//     caps (Gmail/Brevo typically allow ~50). Returns counts so admin sees
+//     exactly what happened. Each batch awaited sequentially to stay under
+//     SMTP throttle limits.
+// BN: Subscriber email list-এ newsletter mass-send। BCC batch-এ break — এক
+//     message-এ recipient cap (Gmail/Brevo সাধারণত ~50) cross না হয়। Count
+//     return — admin দেখে ঠিক কী হয়েছে। Batch sequential await — SMTP
+//     throttle limit-এ থাকতে।
+exports.sendNewsletter = async ({ subject, html, recipients }) => {
+  const transporter = buildTransporter();
+  if (!transporter) return { ok: false, reason: 'smtp-not-configured', sent: 0, failed: 0 };
+  const list = Array.from(new Set((recipients || []).filter(Boolean).map((e) => String(e).trim().toLowerCase())));
+  if (list.length === 0) return { ok: false, reason: 'no-recipients', sent: 0, failed: 0 };
+
+  const BATCH = 50;
+  const wrapped = wrap('Newsletter', html);
+  let sent = 0;
+  let failed = 0;
+  const errors = [];
+
+  for (let i = 0; i < list.length; i += BATCH) {
+    const batch = list.slice(i, i + BATCH);
+    const result = await send({
+      to: adminAddress(),
+      bcc: batch.join(','),
+      subject,
+      html: wrapped,
+    });
+    if (result.sent) {
+      sent += batch.length;
+    } else {
+      failed += batch.length;
+      errors.push(result.reason);
+    }
+  }
+
+  return { ok: sent > 0, sent, failed, total: list.length, errors };
 };
 
 exports.notifyReview = (review) => {
