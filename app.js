@@ -45,6 +45,7 @@ app.use('/api', require('./routes/questionRoute'));
 app.use('/api', require('./routes/userRoute'));
 app.use('/api', require('./routes/siteContent'));
 app.use('/api', require('./routes/applications'));
+app.use('/api', require('./routes/reviews'));
 
 // Image upload (kept inline because it's a single endpoint pair)
 const upload = multer({ storage: multer.memoryStorage() });

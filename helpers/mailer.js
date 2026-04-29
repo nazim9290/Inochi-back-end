@@ -293,6 +293,32 @@ exports.notifySubscriber = ({ email }) => {
   });
 };
 
+exports.notifyReview = (review) => {
+  const stars = '★'.repeat(review.rating || 0) + '☆'.repeat(5 - (review.rating || 0));
+  const html = wrap(
+    'New review submitted',
+    `<p>A visitor submitted a review awaiting moderation:</p>
+     <p><strong>Name:</strong> ${escapeHtml(review.name)}</p>
+     <p><strong>Rating:</strong> ${stars} (${review.rating}/5)</p>
+     ${review.email ? `<p><strong>Email:</strong> ${escapeHtml(review.email)}</p>` : ''}
+     ${review.phone ? `<p><strong>Phone:</strong> ${escapeHtml(review.phone)}</p>` : ''}
+     ${review.location ? `<p><strong>Location:</strong> ${escapeHtml(review.location)}</p>` : ''}
+     ${review.jlptLevel ? `<p><strong>JLPT:</strong> ${escapeHtml(review.jlptLevel)}</p>` : ''}
+     <hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0"/>
+     <p style="background:#f0fafc;padding:12px;border-radius:8px;line-height:1.5;">
+       ${escapeHtml(review.review)}
+     </p>
+     <p style="margin-top:16px;font-size:12px;color:#64748b;">
+       Open the admin → Reviews tab to approve or reject.
+     </p>`
+  );
+  return send({
+    to: adminAddress(),
+    subject: `[Review] ${review.rating}★ — ${review.name}`,
+    html,
+  });
+};
+
 exports.testConnection = async () => {
   const transporter = buildTransporter();
   if (!transporter) return { ok: false, reason: 'smtp-not-configured' };
