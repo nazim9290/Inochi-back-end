@@ -1,12 +1,12 @@
 // EN: Production deploy for the Inochi REST API (Express + Sequelize).
 //     Jenkins runs on the same VPS as the app, so we delegate to the
-//     on-server `inochi-deploy` script which pulls origin/master into
+//     on-server `inochi-deploy` script which pulls origin/main into
 //     `/home/inochi/back-end`, runs `npm install --omit=dev`, then
 //     restarts PM2 process `inochi-api` (port 5000, proxied by nginx
 //     for api.inochieducation.com).
 // BN: Inochi REST API (Express + Sequelize)-এর production deploy। Jenkins
 //     এই VPS-এই, তাই server-এর `inochi-deploy` script-কে delegate করি —
-//     script `/home/inochi/back-end`-এ origin/master pull, `npm install
+//     script `/home/inochi/back-end`-এ origin/main pull, `npm install
 //     --omit=dev`, তারপর PM2 process `inochi-api` (port 5000, nginx-এ
 //     api.inochieducation.com-এর জন্য proxied) restart।
 pipeline {
