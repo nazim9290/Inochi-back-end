@@ -1,5 +1,6 @@
 const { Review } = require('../models');
 const { notifyReview } = require('../helpers/mailer');
+const { logAudit } = require('../helpers/audit');
 
 const ALLOWED_STATUSES = ['pending', 'approved', 'rejected'];
 
@@ -131,6 +132,7 @@ exports.updateReview = async (req, res) => {
   try {
     const r = await Review.findByPk(req.params.id);
     if (!r) return res.status(404).json({ error: 'Review not found' });
+    const before = { status: r.status, published: r.published };
     const { status, published, adminNotes, rating, location, locationEn } = req.body || {};
     const patch = {};
     if (status && ALLOWED_STATUSES.includes(status)) patch.status = status;
@@ -143,6 +145,20 @@ exports.updateReview = async (req, res) => {
     if (typeof location === 'string') patch.location = location.slice(0, 120);
     if (typeof locationEn === 'string') patch.locationEn = locationEn.slice(0, 120);
     await r.update(patch);
+
+    const summaryParts = [];
+    if (patch.status && patch.status !== before.status) summaryParts.push(`status ${before.status}→${patch.status}`);
+    if (typeof patch.published === 'boolean' && patch.published !== before.published) {
+      summaryParts.push(patch.published ? 'published' : 'unpublished');
+    }
+    logAudit(req, {
+      action: 'update',
+      entity: 'Review',
+      entityId: r.id,
+      summary: `Review by ${r.name}${summaryParts.length ? ` — ${summaryParts.join(', ')}` : ''}`,
+      details: { before, after: { status: r.status, published: r.published } },
+    });
+
     res.json({ message: 'Review updated', review: r });
   } catch (err) {
     console.error('Error updating review:', err);
@@ -152,8 +168,17 @@ exports.updateReview = async (req, res) => {
 
 exports.deleteReview = async (req, res) => {
   try {
-    const deleted = await Review.destroy({ where: { id: req.params.id } });
-    if (!deleted) return res.status(404).json({ error: 'Review not found' });
+    const r = await Review.findByPk(req.params.id);
+    if (!r) return res.status(404).json({ error: 'Review not found' });
+    const snap = { name: r.name, rating: r.rating, status: r.status };
+    await r.destroy();
+    logAudit(req, {
+      action: 'delete',
+      entity: 'Review',
+      entityId: req.params.id,
+      summary: `Deleted review by ${snap.name} (${snap.rating}★)`,
+      details: snap,
+    });
     res.json({ message: 'Review deleted' });
   } catch (err) {
     console.error('Error deleting review:', err);

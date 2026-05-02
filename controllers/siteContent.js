@@ -5,7 +5,9 @@ const {
   SuccessStory,
   Faq,
   Branch,
+  Achievement,
 } = require('../models');
+const { logAudit } = require('../helpers/audit');
 
 // ---------------- SITE SETTINGS (singleton) ----------------
 
@@ -30,6 +32,13 @@ exports.updateSiteSettings = async (req, res) => {
     } else {
       await settings.update(req.body || {});
     }
+    logAudit(req, {
+      action: 'update',
+      entity: 'SiteSettings',
+      entityId: settings.id,
+      summary: `Site settings updated (${Object.keys(req.body || {}).length} fields)`,
+      details: { fields: Object.keys(req.body || {}) },
+    });
     res.json({ message: 'Site settings updated', settings });
   } catch (err) {
     console.error('Error updating site settings:', err);
@@ -282,6 +291,92 @@ exports.deleteBranch = async (req, res) => {
     res.json({ message: 'Branch deleted' });
   } catch (err) {
     console.error('Error deleting branch:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// ---------------- ACHIEVEMENTS ----------------
+// EN: Visa wins, Japan reception, events, classroom moments. Public list
+//     supports `?type=` filter and `?featured=true` for the Home strip.
+// BN: ভিসা প্রাপ্তি, জাপান অভ্যর্থনা, event, ক্লাসরুম মুহূর্ত।
+//     Public list-এ ?type= filter এবং Home strip-এর জন্য ?featured=true আছে।
+
+const ACHIEVEMENT_TYPES = ['visa-win', 'arrival', 'event', 'class'];
+
+exports.listAchievements = async (req, res) => {
+  try {
+    const where = {};
+    if (req.query.all !== 'true') where.published = true;
+    if (req.query.type && ACHIEVEMENT_TYPES.includes(req.query.type)) {
+      where.type = req.query.type;
+    }
+    if (req.query.featured === 'true') where.featured = true;
+
+    const limit = Math.min(parseInt(req.query.limit, 10) || 0, 200);
+
+    const achievements = await Achievement.findAll({
+      where,
+      order: [
+        ['sortOrder', 'ASC'],
+        ['eventDate', 'DESC'],
+        ['createdAt', 'DESC'],
+      ],
+      ...(limit ? { limit } : {}),
+    });
+    res.json({ achievements });
+  } catch (err) {
+    console.error('Error listing achievements:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createAchievement = async (req, res) => {
+  try {
+    const a = await Achievement.create(req.body);
+    logAudit(req, {
+      action: 'create',
+      entity: 'Achievement',
+      entityId: a.id,
+      summary: `Achievement created (${a.type})`,
+    });
+    res.status(201).json({ message: 'Achievement created', achievement: a });
+  } catch (err) {
+    console.error('Error creating achievement:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateAchievement = async (req, res) => {
+  try {
+    const a = await Achievement.findByPk(req.params.id);
+    if (!a) return res.status(404).json({ error: 'Achievement not found' });
+    await a.update(req.body);
+    logAudit(req, {
+      action: 'update',
+      entity: 'Achievement',
+      entityId: a.id,
+      summary: `Achievement updated (${a.type})`,
+    });
+    res.json({ message: 'Achievement updated', achievement: a });
+  } catch (err) {
+    console.error('Error updating achievement:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteAchievement = async (req, res) => {
+  try {
+    const deleted = await Achievement.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'Achievement not found' });
+    logAudit(req, {
+      action: 'delete',
+      entity: 'Achievement',
+      entityId: req.params.id,
+      summary: 'Achievement deleted',
+    });
+    res.json({ message: 'Achievement deleted' });
+  } catch (err) {
+    console.error('Error deleting achievement:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

@@ -1,5 +1,6 @@
 const { User } = require('../models');
 const { hashPassword } = require('../helpers/auth');
+const { logAudit } = require('../helpers/audit');
 
 const ROLES = ['admin', 'student', 'gust', 'staff'];
 
@@ -62,6 +63,13 @@ exports.createUserByAdmin = async (req, res) => {
       role: role || 'gust',
       branch: branch || 'A',
     });
+    logAudit(req, {
+      action: 'create',
+      entity: 'User',
+      entityId: user.id,
+      summary: `Created ${user.role} account for ${user.name}`,
+      details: { name: user.name, role: user.role, email: user.email },
+    });
     res.status(201).json({ message: 'User created', user: stripPassword(user) });
   } catch (err) {
     console.error('Error creating user:', err);
@@ -80,13 +88,23 @@ exports.updateUserByAdmin = async (req, res) => {
     if (typeof phone === 'string' && phone.trim()) patch.phone = phone.trim();
     if (role && ROLES.includes(role)) patch.role = role;
     if (typeof branch === 'string') patch.branch = branch;
+    let passwordChanged = false;
     if (password) {
       if (password.length < 6) {
         return res.status(400).json({ error: 'Password কমপক্ষে ৬ অক্ষরের হতে হবে' });
       }
       patch.password = await hashPassword(password);
+      passwordChanged = true;
     }
     await user.update(patch);
+    const changedFields = Object.keys(patch).filter((k) => k !== 'password');
+    logAudit(req, {
+      action: 'update',
+      entity: 'User',
+      entityId: user.id,
+      summary: `Updated ${user.name}${passwordChanged ? ' (password reset)' : changedFields.length ? ` — ${changedFields.join(', ')}` : ''}`,
+      details: { changedFields, passwordChanged },
+    });
     res.json({ message: 'User updated', user: stripPassword(user) });
   } catch (err) {
     console.error('Error updating user:', err);
@@ -104,8 +122,17 @@ exports.deleteUserByAdmin = async (req, res) => {
     if (selfId && String(selfId) === String(req.params.id)) {
       return res.status(400).json({ error: 'নিজের account নিজে delete করা যাবে না' });
     }
-    const deleted = await User.destroy({ where: { id: req.params.id } });
-    if (!deleted) return res.status(404).json({ error: 'User not found' });
+    const target = await User.findByPk(req.params.id);
+    if (!target) return res.status(404).json({ error: 'User not found' });
+    const snap = { name: target.name, role: target.role, email: target.email };
+    await target.destroy();
+    logAudit(req, {
+      action: 'delete',
+      entity: 'User',
+      entityId: req.params.id,
+      summary: `Deleted ${snap.role} account ${snap.name}`,
+      details: snap,
+    });
     res.json({ message: 'User deleted' });
   } catch (err) {
     console.error('Error deleting user:', err);

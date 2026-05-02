@@ -11,6 +11,7 @@
 
 const { Application } = require('../models');
 const mailer = require('../helpers/mailer');
+const { logAudit } = require('../helpers/audit');
 
 // EN: Allowed status values. Reject anything else from the admin UI.
 // BN: Allowed status value। Admin UI থেকে অন্য কিছু আসলে reject।
@@ -134,6 +135,16 @@ exports.updateApplication = async (req, res) => {
         .catch((e) => console.error('statusUpdateApplicant:', e));
     }
 
+    if (statusChanged) {
+      logAudit(req, {
+        action: 'update',
+        entity: 'Application',
+        entityId: app.id,
+        summary: `Application by ${app.fullName}: status → ${patch.status}`,
+        details: { name: app.fullName, status: patch.status },
+      });
+    }
+
     return res.status(200).json({ message: 'Application updated', application: app });
   } catch (err) {
     console.error('Error updating application:', err);
@@ -145,8 +156,17 @@ exports.updateApplication = async (req, res) => {
 // BN: Admin — hard delete। Model-এ soft-delete column নেই, তাই এটা final।
 exports.deleteApplication = async (req, res) => {
   try {
-    const deleted = await Application.destroy({ where: { id: req.params.id } });
-    if (!deleted) return res.status(404).json({ error: 'Application not found' });
+    const app = await Application.findByPk(req.params.id);
+    if (!app) return res.status(404).json({ error: 'Application not found' });
+    const snap = { fullName: app.fullName, email: app.email, status: app.status };
+    await app.destroy();
+    logAudit(req, {
+      action: 'delete',
+      entity: 'Application',
+      entityId: req.params.id,
+      summary: `Deleted application by ${snap.fullName}`,
+      details: snap,
+    });
     return res.status(200).json({ message: 'Application deleted' });
   } catch (err) {
     console.error('Error deleting application:', err);

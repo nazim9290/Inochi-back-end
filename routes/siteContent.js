@@ -12,6 +12,7 @@ router.get('/jlpt-courses', c.listCourses);
 router.get('/success-stories', c.listStories);
 router.get('/faqs', c.listFaqs);
 router.get('/branches', c.listBranches);
+router.get('/achievements', c.listAchievements);
 
 // Admin writes
 router.put('/site-settings', requireAuth, checkAdmin, c.updateSiteSettings);
@@ -35,5 +36,9 @@ router.delete('/faqs/:id', requireAuth, checkAdmin, c.deleteFaq);
 router.post('/branches', requireAuth, checkAdmin, c.createBranch);
 router.put('/branches/:id', requireAuth, checkAdmin, c.updateBranch);
 router.delete('/branches/:id', requireAuth, checkAdmin, c.deleteBranch);
+
+router.post('/achievements', requireAuth, checkAdmin, c.createAchievement);
+router.put('/achievements/:id', requireAuth, checkAdmin, c.updateAchievement);
+router.delete('/achievements/:id', requireAuth, checkAdmin, c.deleteAchievement);
 
 module.exports = router;
