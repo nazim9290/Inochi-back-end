@@ -17,15 +17,15 @@ pipeline {
     disableConcurrentBuilds()
   }
   stages {
-    // EN: Backend repo's default branch is still 'master' (legacy from before
-    //     the project switched to 'main' on other repos). Tracked here for
-    //     visibility — the deploy script also pulls master directly.
-    // BN: Backend repo-র default branch এখনও 'master' (অন্য repo-গুলো main-এ
-    //     যাওয়ার আগে থেকে legacy)। Visibility-এর জন্য এখানে tracked — deploy
-    //     script-ও সরাসরি master-ই pull করে।
+    // EN: Renamed master → main on 2026-05-02 to align with the admin and
+    //     frontend repos. Checkout records the commit hash in build history;
+    //     the on-server deploy script also pulls main directly.
+    // BN: ২০২৬-০৫-০২ তারিখে master → main rename করা হয়েছে — admin আর
+    //     frontend repo-র সাথে align করে। Build history-তে commit hash record
+    //     করার জন্য Checkout; on-server deploy script-ও main-ই pull করে।
     stage('Checkout') {
       steps {
-        git branch: 'master', url: 'https://github.com/nazim9290/Inochi-back-end.git'
+        git branch: 'main', url: 'https://github.com/nazim9290/Inochi-back-end.git'
       }
     }
     stage('Deploy') {
