@@ -27,6 +27,7 @@ const Branch = require('./Branch');
 const Application = require('./Application');
 const AuditLog = require('./AuditLog');
 const Achievement = require('./Achievement');
+const HomeVideo = require('./HomeVideo');
 
 // Associations
 User.hasMany(Blog, { foreignKey: 'authorId', as: 'blogs' });
@@ -70,4 +71,5 @@ module.exports = {
   Application,
   AuditLog,
   Achievement,
+  HomeVideo,
 };

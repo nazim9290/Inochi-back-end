@@ -13,6 +13,7 @@ router.get('/success-stories', c.listStories);
 router.get('/faqs', c.listFaqs);
 router.get('/branches', c.listBranches);
 router.get('/achievements', c.listAchievements);
+router.get('/home-videos', c.listHomeVideos);
 
 // Admin writes
 router.put('/site-settings', requireAuth, checkAdmin, c.updateSiteSettings);
@@ -40,5 +41,9 @@ router.delete('/branches/:id', requireAuth, checkAdmin, c.deleteBranch);
 router.post('/achievements', requireAuth, checkAdmin, c.createAchievement);
 router.put('/achievements/:id', requireAuth, checkAdmin, c.updateAchievement);
 router.delete('/achievements/:id', requireAuth, checkAdmin, c.deleteAchievement);
+
+router.post('/home-videos', requireAuth, checkAdmin, c.createHomeVideo);
+router.put('/home-videos/:id', requireAuth, checkAdmin, c.updateHomeVideo);
+router.delete('/home-videos/:id', requireAuth, checkAdmin, c.deleteHomeVideo);
 
 module.exports = router;

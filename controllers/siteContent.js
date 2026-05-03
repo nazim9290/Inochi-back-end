@@ -6,6 +6,7 @@ const {
   Faq,
   Branch,
   Achievement,
+  HomeVideo,
 } = require('../models');
 const { logAudit } = require('../helpers/audit');
 
@@ -377,6 +378,82 @@ exports.deleteAchievement = async (req, res) => {
     res.json({ message: 'Achievement deleted' });
   } catch (err) {
     console.error('Error deleting achievement:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// ---------------- HOME VIDEOS ----------------
+// EN: Curated YouTube videos shown on the public home page after the success
+//     section. Public list filters out unpublished entries; admin can pass
+//     `?all=true` to see drafts.
+// BN: Public home page-এ success section-এর পর দেখানো curated YouTube
+//     video। Public list-এ unpublished বাদ; admin `?all=true` দিয়ে draft
+//     দেখতে পারে।
+
+exports.listHomeVideos = async (req, res) => {
+  try {
+    const where = req.query.all === 'true' ? {} : { published: true };
+    const videos = await HomeVideo.findAll({
+      where,
+      order: [
+        ['sortOrder', 'ASC'],
+        ['createdAt', 'DESC'],
+      ],
+    });
+    res.json({ videos });
+  } catch (err) {
+    console.error('Error listing home videos:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createHomeVideo = async (req, res) => {
+  try {
+    const v = await HomeVideo.create(req.body);
+    logAudit(req, {
+      action: 'create',
+      entity: 'HomeVideo',
+      entityId: v.id,
+      summary: `Home video added (${v.title || v.youtubeUrl})`,
+    });
+    res.status(201).json({ message: 'Home video created', video: v });
+  } catch (err) {
+    console.error('Error creating home video:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateHomeVideo = async (req, res) => {
+  try {
+    const v = await HomeVideo.findByPk(req.params.id);
+    if (!v) return res.status(404).json({ error: 'Home video not found' });
+    await v.update(req.body);
+    logAudit(req, {
+      action: 'update',
+      entity: 'HomeVideo',
+      entityId: v.id,
+      summary: `Home video updated (${v.title || v.youtubeUrl})`,
+    });
+    res.json({ message: 'Home video updated', video: v });
+  } catch (err) {
+    console.error('Error updating home video:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteHomeVideo = async (req, res) => {
+  try {
+    const deleted = await HomeVideo.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'Home video not found' });
+    logAudit(req, {
+      action: 'delete',
+      entity: 'HomeVideo',
+      entityId: req.params.id,
+      summary: 'Home video deleted',
+    });
+    res.json({ message: 'Home video deleted' });
+  } catch (err) {
+    console.error('Error deleting home video:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
