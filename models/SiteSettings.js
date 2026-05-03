@@ -64,6 +64,9 @@ const SiteSettings = sequelize.define(
     youtubeUrl: { type: DataTypes.STRING, defaultValue: '' },
     instagramUrl: { type: DataTypes.STRING, defaultValue: '' },
     tiktokUrl: { type: DataTypes.STRING, defaultValue: '' },
+    linkedinUrl: { type: DataTypes.STRING, defaultValue: '' },
+    twitterUrl: { type: DataTypes.STRING, defaultValue: '' },
+    googleBusinessUrl: { type: DataTypes.STRING(500), defaultValue: '' },
 
     // About
     aboutHeading: { type: DataTypes.STRING(500), defaultValue: '' },
