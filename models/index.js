@@ -28,6 +28,8 @@ const Application = require('./Application');
 const AuditLog = require('./AuditLog');
 const Achievement = require('./Achievement');
 const HomeVideo = require('./HomeVideo');
+const BlogReaction = require('./BlogReaction');
+const BlogComment = require('./BlogComment');
 
 // Associations
 User.hasMany(Blog, { foreignKey: 'authorId', as: 'blogs' });
@@ -41,6 +43,22 @@ Team.belongsTo(User, { foreignKey: 'authorId', as: 'author' });
 
 User.hasMany(Review, { foreignKey: 'postedby', as: 'reviews' });
 Review.belongsTo(User, { foreignKey: 'postedby', as: 'postedByUser' });
+
+// EN: Blog reactions — one per (blog, user); cascade on blog/user delete.
+// BN: Blog reaction — প্রতি (blog, user) যুগলে একটা; blog/user delete-এ cascade।
+Blog.hasMany(BlogReaction, { foreignKey: 'blogId', as: 'reactions', onDelete: 'CASCADE' });
+BlogReaction.belongsTo(Blog, { foreignKey: 'blogId', as: 'blog' });
+User.hasMany(BlogReaction, { foreignKey: 'userId', as: 'blogReactions', onDelete: 'CASCADE' });
+BlogReaction.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+// EN: Blog comments — threaded (1 level). Cascade on blog/user/parent delete.
+// BN: Blog comment — 1-level thread। blog/user/parent delete-এ cascade।
+Blog.hasMany(BlogComment, { foreignKey: 'blogId', as: 'comments', onDelete: 'CASCADE' });
+BlogComment.belongsTo(Blog, { foreignKey: 'blogId', as: 'blog' });
+User.hasMany(BlogComment, { foreignKey: 'userId', as: 'blogComments', onDelete: 'CASCADE' });
+BlogComment.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+BlogComment.hasMany(BlogComment, { foreignKey: 'parentId', as: 'replies', onDelete: 'CASCADE' });
+BlogComment.belongsTo(BlogComment, { foreignKey: 'parentId', as: 'parent' });
 
 module.exports = {
   sequelize,
@@ -72,4 +90,6 @@ module.exports = {
   AuditLog,
   Achievement,
   HomeVideo,
+  BlogReaction,
+  BlogComment,
 };

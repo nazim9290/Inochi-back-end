@@ -17,16 +17,26 @@ exports.register = async (req, res) => {
   if (!password || password.length < 6) {
     return res.json({ error: 'Password is required and should be 6 characters long' });
   }
+  if (!phone) return res.json({ error: 'Phone is required' });
 
   try {
     if (email) {
       const exists = await User.findOne({ where: { email } });
       if (exists) return res.json({ error: 'email is taken' });
     }
+    // EN: phone is unique on the User table — surface a nice error before insert.
+    // BN: User table-এ phone unique — insert-এর আগে ভাল error message দেখাই।
+    const phoneExists = await User.findOne({ where: { phone } });
+    if (phoneExists) return res.json({ error: 'phone is taken' });
 
     const hashedPassword = await hashPassword(password);
-    await User.create({ name, password: hashedPassword, phone, email });
-    return res.json({ ok: true });
+    const created = await User.create({ name, password: hashedPassword, phone, email });
+    // EN: Auto-login on signup — return token + user so the public site can keep the session.
+    // BN: Signup-এর সাথে auto-login — token + user return করি যাতে public site session রাখতে পারে।
+    const token = jwt.sign({ _id: created.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    const userData = created.toJSON();
+    delete userData.password;
+    return res.json({ ok: true, token, user: userData });
   } catch (err) {
     console.error('REGISTER FAILED =>', err);
     return res.status(400).send('Error. Try again.');
@@ -68,9 +78,13 @@ exports.login = async (req, res) => {
 
 exports.currentUser = async (req, res) => {
   try {
-    const user = await User.findByPk(req.user._id || req.user.id);
-    if (!user) return res.sendStatus(404);
-    res.json({ ok: true });
+    // EN: requireAuth middleware already loaded & validated the user; reuse it.
+    //     Strip password before returning so the field never reaches the wire.
+    // BN: requireAuth middleware আগেই user load + validate করেছে; reuse করি।
+    //     Password strip করে return — wire-এ যাতে কখনো leak না হয়।
+    const user = req.user.toJSON();
+    delete user.password;
+    res.json({ ok: true, user });
   } catch (err) {
     console.error('currentUser error:', err);
     res.sendStatus(400);
