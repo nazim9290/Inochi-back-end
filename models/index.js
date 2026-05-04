@@ -30,6 +30,7 @@ const Achievement = require('./Achievement');
 const HomeVideo = require('./HomeVideo');
 const BlogReaction = require('./BlogReaction');
 const BlogComment = require('./BlogComment');
+const BlogBookmark = require('./BlogBookmark');
 
 // Associations
 User.hasMany(Blog, { foreignKey: 'authorId', as: 'blogs' });
@@ -59,6 +60,18 @@ User.hasMany(BlogComment, { foreignKey: 'userId', as: 'blogComments', onDelete: 
 BlogComment.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 BlogComment.hasMany(BlogComment, { foreignKey: 'parentId', as: 'replies', onDelete: 'CASCADE' });
 BlogComment.belongsTo(BlogComment, { foreignKey: 'parentId', as: 'parent' });
+
+// EN: Blog bookmarks — saved posts per logged-in user.
+// BN: Blog bookmark — logged-in user-এর saved post।
+User.hasMany(BlogBookmark, { foreignKey: 'userId', as: 'blogBookmarks', onDelete: 'CASCADE' });
+BlogBookmark.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+Blog.hasMany(BlogBookmark, { foreignKey: 'blogId', as: 'bookmarks', onDelete: 'CASCADE' });
+BlogBookmark.belongsTo(Blog, { foreignKey: 'blogId', as: 'blog' });
+
+// EN: Applications optionally linked to a User (for /account tracker).
+// BN: Application optionally User-এর সাথে link (/account tracker-এর জন্য)।
+User.hasMany(Application, { foreignKey: 'userId', as: 'applications', onDelete: 'SET NULL' });
+Application.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 module.exports = {
   sequelize,
@@ -92,4 +105,5 @@ module.exports = {
   HomeVideo,
   BlogReaction,
   BlogComment,
+  BlogBookmark,
 };

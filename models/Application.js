@@ -66,6 +66,20 @@ const Application = sequelize.define(
     //     App code validate করে (DB enum না) যাতে migration ছাড়াই নতুন state
     //     যোগ করা যায়।
     status: { type: DataTypes.STRING(30), defaultValue: 'new' },
+
+    // EN: Optional FK to the User who submitted while logged in. Stays null
+    //     for anonymous submissions; backfilled on demand by matching email.
+    //     Powers the /account "My Applications" tracker.
+    // BN: Logged-in হয়ে submit করা User-এর optional FK। Anonymous submission-এ
+    //     null; email match দিয়ে on-demand backfill হয়। /account "My
+    //     Applications" tracker এই field দিয়ে চলে।
+    userId: {
+      type: DataTypes.UUID,
+      field: 'user_id',
+      allowNull: true,
+      references: { model: 'users', key: 'id' },
+      onDelete: 'SET NULL',
+    },
   },
   {
     tableName: 'applications',

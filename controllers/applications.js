@@ -27,7 +27,12 @@ exports.createApplication = async (req, res) => {
     return res.status(400).json({ error: 'fullName, email and phone are required.' });
   }
   try {
-    const app = await Application.create({ ...req.body, status: 'new' });
+    // EN: If the visitor was logged in (optionalAuth populated req.user),
+    //     stamp userId so /account → My Applications can surface this row.
+    // BN: Visitor logged-in হলে (optionalAuth req.user populate করেছে),
+    //     userId stamp — যাতে /account → My Applications-এ দেখা যায়।
+    const userId = req.user ? (req.user.id || req.user._id) : null;
+    const app = await Application.create({ ...req.body, status: 'new', userId });
     // EN: Friendly Bangla acknowledgement to the applicant — fires immediately
     //     so they see "we got it" before they put the phone down. Non-blocking.
     // BN: Applicant-কে friendly Bangla acknowledgement — সাথে সাথে fire,
