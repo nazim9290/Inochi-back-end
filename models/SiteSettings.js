@@ -98,6 +98,20 @@ const SiteSettings = sequelize.define(
     siteDescriptionEn: { type: DataTypes.TEXT, defaultValue: '' },
     metaKeywords: { type: DataTypes.TEXT, defaultValue: '' }, // CSV: "japan study,jlpt,..."
     ogImageUrl: { type: DataTypes.STRING(500), defaultValue: '' }, // 1200x630 social card
+
+    // Blog OG promo band — overlays a navy strip with brand text on every blog
+    // share card. Cloudinary text overlay does the rendering server-side, so
+    // changing any of these takes effect on the next page render (no rebuild).
+    blogOgPromoEnabled: { type: DataTypes.BOOLEAN, defaultValue: true },
+    blogOgPromoText: {
+      type: DataTypes.STRING(200),
+      defaultValue: 'inochieducation.com — Japan Study Consultancy',
+    },
+    blogOgPromoBandColor: { type: DataTypes.STRING(20), defaultValue: '#0F2D52' },
+    blogOgPromoTextColor: { type: DataTypes.STRING(20), defaultValue: '#FFFFFF' },
+    blogOgPromoFont: { type: DataTypes.STRING(40), defaultValue: 'Roboto' },
+    blogOgPromoFontSize: { type: DataTypes.INTEGER, defaultValue: 40 },
+    blogOgPromoBandHeight: { type: DataTypes.INTEGER, defaultValue: 80 },
   },
   {
     tableName: 'site_settings',
