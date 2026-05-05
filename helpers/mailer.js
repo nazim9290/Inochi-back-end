@@ -281,6 +281,33 @@ exports.notifyApplication = (app) => {
   });
 };
 
+// EN: Double-opt-in confirmation email — visitor must click before they're
+//     added to the newsletter list. Plain layout, single CTA, link visible
+//     beneath in case the button gets swallowed by a strict mail client.
+// BN: Double-opt-in confirmation email — newsletter list-এ যোগ হওয়ার আগে
+//     visitor-কে click করতে হবে। সাধারণ layout, একটাই CTA; কঠোর mail
+//     client button render না করলেও নিচে link দেখাই।
+exports.confirmSubscriber = ({ email, confirmUrl }) => {
+  if (!email || !confirmUrl) return Promise.resolve({ sent: false, reason: 'missing-args' });
+  const html = wrap(
+    'Confirm your subscription',
+    `
+    <p>Hello,</p>
+    <p>Thank you for subscribing to the Inochi Global Education newsletter. To finish the process, please confirm your email address by clicking the button below.</p>
+    <p style="margin:24px 0;text-align:center">
+      <a href="${escapeHtml(confirmUrl)}" style="display:inline-block;background:#29B5C4;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold">Confirm subscription</a>
+    </p>
+    <p style="font-size:12px;color:#64748b">If the button doesn't work, copy and paste this link into your browser:<br><a href="${escapeHtml(confirmUrl)}" style="color:#29B5C4;word-break:break-all">${escapeHtml(confirmUrl)}</a></p>
+    <p style="margin-top:18px;font-size:12px;color:#94a3b8">If you did not request this, you can ignore this email — no subscription will be created.</p>
+    `
+  );
+  return send({
+    to: email,
+    subject: 'Please confirm your Inochi newsletter subscription',
+    html,
+  });
+};
+
 exports.notifySubscriber = ({ email }) => {
   const html = wrap(
     'New newsletter subscriber',
