@@ -28,7 +28,12 @@ const Subscriber = sequelize.define(
   {
     tableName: 'subscribers',
     timestamps: true,
-    indexes: [{ fields: ['confirmToken'] }],
+    // EN: Index references the underlying column name (snake_case under
+    //     `underscored: true`) — not the JS field name. Otherwise sequelize
+    //     sync({alter}) tries to create an index on a non-existent column.
+    // BN: Index column-এর actual snake_case name দেয় — JS field name না।
+    //     নইলে sequelize sync({alter}) non-existent column-এ index বানাতে গিয়ে fail।
+    indexes: [{ fields: ['confirm_token'] }],
   }
 );
 
