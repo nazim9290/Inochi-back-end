@@ -7,6 +7,7 @@ const {
   Branch,
   Achievement,
   HomeVideo,
+  AgencyMoment,
 } = require('../models');
 const { logAudit } = require('../helpers/audit');
 
@@ -454,6 +455,84 @@ exports.deleteHomeVideo = async (req, res) => {
     res.json({ message: 'Home video deleted' });
   } catch (err) {
     console.error('Error deleting home video:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// ---------------- AGENCY MOMENTS ----------------
+// EN: Agency-life photo strip below the home Hero. Same shape as HomeVideo —
+//     public list filters out unpublished; admin can pass `?all=true` to see
+//     drafts. Sort by sortOrder asc then createdAt desc so newest stays at
+//     the head when admin doesn't bother setting sortOrder.
+// BN: Home Hero-এর নিচে agency-life photo strip। HomeVideo-এর মতোই shape —
+//     public list-এ unpublished বাদ; admin `?all=true` দিয়ে draft দেখতে
+//     পারে। sortOrder asc → createdAt desc — admin sortOrder না দিলে নতুন
+//     ছবি head-এ থাকে।
+
+exports.listAgencyMoments = async (req, res) => {
+  try {
+    const where = req.query.all === 'true' ? {} : { published: true };
+    const moments = await AgencyMoment.findAll({
+      where,
+      order: [
+        ['sortOrder', 'ASC'],
+        ['createdAt', 'DESC'],
+      ],
+    });
+    res.json({ moments });
+  } catch (err) {
+    console.error('Error listing agency moments:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createAgencyMoment = async (req, res) => {
+  try {
+    const m = await AgencyMoment.create(req.body);
+    logAudit(req, {
+      action: 'create',
+      entity: 'AgencyMoment',
+      entityId: m.id,
+      summary: `Agency moment added (${m.caption || m.captionEn || m.photoUrl})`,
+    });
+    res.status(201).json({ message: 'Agency moment created', moment: m });
+  } catch (err) {
+    console.error('Error creating agency moment:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateAgencyMoment = async (req, res) => {
+  try {
+    const m = await AgencyMoment.findByPk(req.params.id);
+    if (!m) return res.status(404).json({ error: 'Agency moment not found' });
+    await m.update(req.body);
+    logAudit(req, {
+      action: 'update',
+      entity: 'AgencyMoment',
+      entityId: m.id,
+      summary: `Agency moment updated (${m.caption || m.captionEn || m.photoUrl})`,
+    });
+    res.json({ message: 'Agency moment updated', moment: m });
+  } catch (err) {
+    console.error('Error updating agency moment:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteAgencyMoment = async (req, res) => {
+  try {
+    const deleted = await AgencyMoment.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'Agency moment not found' });
+    logAudit(req, {
+      action: 'delete',
+      entity: 'AgencyMoment',
+      entityId: req.params.id,
+      summary: 'Agency moment deleted',
+    });
+    res.json({ message: 'Agency moment deleted' });
+  } catch (err) {
+    console.error('Error deleting agency moment:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

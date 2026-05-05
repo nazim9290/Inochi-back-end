@@ -28,6 +28,7 @@ const Application = require('./Application');
 const AuditLog = require('./AuditLog');
 const Achievement = require('./Achievement');
 const HomeVideo = require('./HomeVideo');
+const AgencyMoment = require('./AgencyMoment');
 const BlogReaction = require('./BlogReaction');
 const BlogComment = require('./BlogComment');
 const BlogBookmark = require('./BlogBookmark');
@@ -103,6 +104,7 @@ module.exports = {
   AuditLog,
   Achievement,
   HomeVideo,
+  AgencyMoment,
   BlogReaction,
   BlogComment,
   BlogBookmark,

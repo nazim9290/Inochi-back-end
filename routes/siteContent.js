@@ -14,6 +14,7 @@ router.get('/faqs', c.listFaqs);
 router.get('/branches', c.listBranches);
 router.get('/achievements', c.listAchievements);
 router.get('/home-videos', c.listHomeVideos);
+router.get('/agency-moments', c.listAgencyMoments);
 
 // Admin writes
 router.put('/site-settings', requireAuth, checkAdmin, c.updateSiteSettings);
@@ -45,5 +46,9 @@ router.delete('/achievements/:id', requireAuth, checkAdmin, c.deleteAchievement)
 router.post('/home-videos', requireAuth, checkAdmin, c.createHomeVideo);
 router.put('/home-videos/:id', requireAuth, checkAdmin, c.updateHomeVideo);
 router.delete('/home-videos/:id', requireAuth, checkAdmin, c.deleteHomeVideo);
+
+router.post('/agency-moments', requireAuth, checkAdmin, c.createAgencyMoment);
+router.put('/agency-moments/:id', requireAuth, checkAdmin, c.updateAgencyMoment);
+router.delete('/agency-moments/:id', requireAuth, checkAdmin, c.deleteAgencyMoment);
 
 module.exports = router;
