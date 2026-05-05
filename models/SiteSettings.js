@@ -88,6 +88,22 @@ const SiteSettings = sequelize.define(
     gaTrackingId: { type: DataTypes.STRING, defaultValue: '' },
     googleSiteVerification: { type: DataTypes.STRING, defaultValue: '' },
     googleTagManagerId: { type: DataTypes.STRING, defaultValue: '' },
+    // EN: Bing/Yandex/FB domain ownership tags — same pattern as GSC.
+    //     Frontend root layout reads these and emits the verification meta
+    //     tag automatically when set. Empty = no tag emitted.
+    // BN: Bing/Yandex/FB domain ownership tag — GSC-এর মতোই pattern।
+    //     Frontend root layout এগুলো পড়ে set থাকলে verification meta tag
+    //     emit করে। Empty হলে কোনো tag emit হয় না।
+    bingSiteVerification: { type: DataTypes.STRING, defaultValue: '' },
+    yandexSiteVerification: { type: DataTypes.STRING, defaultValue: '' },
+    fbDomainVerification: { type: DataTypes.STRING, defaultValue: '' },
+    pinterestSiteVerification: { type: DataTypes.STRING, defaultValue: '' },
+    // EN: Google review aggregate — feeds AggregateRating schema for ⭐ in
+    //     SERP. Both rating + count must be > 0 for the schema to fire.
+    // BN: Google review aggregate — AggregateRating schema feed করে SERP
+    //     ⭐-এর জন্য। rating + count দুটোই > 0 হলে schema fire।
+    googleRating: { type: DataTypes.FLOAT, defaultValue: 0 },
+    googleReviewCount: { type: DataTypes.INTEGER, defaultValue: 0 },
 
     // SEO / meta — admin-overridable defaults that show in browser tab,
     // search results, and social share cards. Empty fields fall back to
