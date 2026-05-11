@@ -5,6 +5,7 @@ const {
   SuccessStory,
   Faq,
   Branch,
+  BdCity,
   Achievement,
   HomeVideo,
   AgencyMoment,
@@ -533,6 +534,137 @@ exports.deleteAgencyMoment = async (req, res) => {
     res.json({ message: 'Agency moment deleted' });
   } catch (err) {
     console.error('Error deleting agency moment:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// ---------------- BD CITIES (Study-from landing pages) ----------------
+// EN: Public reads are shaped to match the legacy `bd-city-pages.json` format
+//     so the Next.js page can swap data sources without changing render code.
+//     Multilingual scalar fields collapse into {en, bn, ja} objects; flat
+//     scalars stay flat. Admin reads (?all=true&raw=true) return DB columns
+//     verbatim because the admin form edits per-language inputs directly.
+// BN: Public read legacy `bd-city-pages.json` format-এর সাথে মেলানো হয় —
+//     Next.js page render code না পাল্টে data source swap করতে পারে।
+//     Multilingual scalar field {en, bn, ja} object-এ collapse হয়; flat
+//     scalar flat-ই থাকে। Admin read (?all=true&raw=true) DB column যেমনি
+//     return করে, কারণ admin form per-language input সরাসরি edit করে।
+
+// EN: Helper — turn three columns into the legacy multilingual object shape.
+//     Empty languages get omitted so JSON.stringify keeps payloads small.
+// BN: Helper — তিনটা column legacy multilingual object shape-এ রূপান্তর।
+//     Empty language বাদ — JSON.stringify-এর payload ছোট থাকে।
+const triLang = (bn, en, ja) => {
+  const out = {};
+  if (bn) out.bn = bn;
+  if (en) out.en = en;
+  if (ja) out.ja = ja;
+  return out;
+};
+
+// EN: Adapt a single BdCity row into the public-page consumption shape.
+// BN: একটা BdCity row public-page consumption shape-এ adapt।
+const shapeBdCity = (city) => {
+  const c = city.toJSON ? city.toJSON() : city;
+  return {
+    slug: c.slug,
+    name: triLang(c.name, c.nameEn, c.nameJa),
+    tagline: triLang(c.tagline, c.taglineEn, c.taglineJa),
+    studentsPlaced: c.studentsPlaced || 0,
+    branchAddress: c.hasBranch ? triLang(c.branchAddress, c.branchAddressEn) : null,
+    hasBranch: !!c.hasBranch,
+    phones: Array.isArray(c.phones) ? c.phones : [],
+    heroImage: c.heroImage || '',
+    highlights: Array.isArray(c.highlights) ? c.highlights : [],
+    nearbyAreas: Array.isArray(c.nearbyAreas) ? c.nearbyAreas : [],
+    programsOffered: Array.isArray(c.programsOffered) ? c.programsOffered : [],
+    nextIntake: triLang(c.nextIntake, c.nextIntakeEn),
+    counsellingMode: c.counsellingMode || 'online',
+  };
+};
+
+exports.listBdCities = async (req, res) => {
+  try {
+    const where = req.query.all === 'true' ? {} : { published: true };
+    const rows = await BdCity.findAll({
+      where,
+      order: [['sortOrder', 'ASC'], ['name', 'ASC']],
+    });
+    // EN: Admin form needs raw DB rows; public site needs the shaped form.
+    // BN: Admin form raw DB row চায়; public site shaped form।
+    const cities = req.query.raw === 'true' ? rows : rows.map(shapeBdCity);
+    res.json({ cities });
+  } catch (err) {
+    console.error('Error listing bd cities:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.getBdCity = async (req, res) => {
+  try {
+    const row = await BdCity.findOne({ where: { slug: req.params.slug } });
+    if (!row) return res.status(404).json({ error: 'City not found' });
+    const city = req.query.raw === 'true' ? row : shapeBdCity(row);
+    res.json({ city });
+  } catch (err) {
+    console.error('Error fetching bd city:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createBdCity = async (req, res) => {
+  try {
+    const city = await BdCity.create(req.body);
+    logAudit(req, {
+      action: 'create',
+      entity: 'BdCity',
+      entityId: city.id,
+      summary: `BD city added (${city.name || city.slug})`,
+    });
+    res.status(201).json({ message: 'City created', city });
+  } catch (err) {
+    console.error('Error creating bd city:', err);
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ error: 'এই slug ইতিমধ্যে আছে — অন্য একটা দিন।' });
+    }
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateBdCity = async (req, res) => {
+  try {
+    const city = await BdCity.findByPk(req.params.id);
+    if (!city) return res.status(404).json({ error: 'City not found' });
+    await city.update(req.body);
+    logAudit(req, {
+      action: 'update',
+      entity: 'BdCity',
+      entityId: city.id,
+      summary: `BD city updated (${city.name || city.slug})`,
+    });
+    res.json({ message: 'City updated', city });
+  } catch (err) {
+    console.error('Error updating bd city:', err);
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ error: 'এই slug ইতিমধ্যে আছে — অন্য একটা দিন।' });
+    }
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteBdCity = async (req, res) => {
+  try {
+    const deleted = await BdCity.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'City not found' });
+    logAudit(req, {
+      action: 'delete',
+      entity: 'BdCity',
+      entityId: req.params.id,
+      summary: 'BD city deleted',
+    });
+    res.json({ message: 'City deleted' });
+  } catch (err) {
+    console.error('Error deleting bd city:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

@@ -24,6 +24,7 @@ const JlptCourse = require('./JlptCourse');
 const SuccessStory = require('./SuccessStory');
 const Faq = require('./Faq');
 const Branch = require('./Branch');
+const BdCity = require('./BdCity');
 const Application = require('./Application');
 const AuditLog = require('./AuditLog');
 const Achievement = require('./Achievement');
@@ -100,6 +101,7 @@ module.exports = {
   SuccessStory,
   Faq,
   Branch,
+  BdCity,
   Application,
   AuditLog,
   Achievement,

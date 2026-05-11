@@ -15,6 +15,8 @@ router.get('/branches', c.listBranches);
 router.get('/achievements', c.listAchievements);
 router.get('/home-videos', c.listHomeVideos);
 router.get('/agency-moments', c.listAgencyMoments);
+router.get('/bd-cities', c.listBdCities);
+router.get('/bd-cities/:slug', c.getBdCity);
 
 // Admin writes
 router.put('/site-settings', requireAuth, checkAdmin, c.updateSiteSettings);
@@ -50,5 +52,9 @@ router.delete('/home-videos/:id', requireAuth, checkAdmin, c.deleteHomeVideo);
 router.post('/agency-moments', requireAuth, checkAdmin, c.createAgencyMoment);
 router.put('/agency-moments/:id', requireAuth, checkAdmin, c.updateAgencyMoment);
 router.delete('/agency-moments/:id', requireAuth, checkAdmin, c.deleteAgencyMoment);
+
+router.post('/bd-cities', requireAuth, checkAdmin, c.createBdCity);
+router.put('/bd-cities/:id', requireAuth, checkAdmin, c.updateBdCity);
+router.delete('/bd-cities/:id', requireAuth, checkAdmin, c.deleteBdCity);
 
 module.exports = router;
