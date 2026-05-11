@@ -17,8 +17,12 @@ const Branch = sequelize.define(
     slug: { type: DataTypes.STRING(80), allowNull: false, unique: true },
     city: { type: DataTypes.STRING, allowNull: false },
     cityBn: { type: DataTypes.STRING, defaultValue: '' },
+    // EN: Optional Japanese — Japan-side parents see katakana city names.
+    // BN: Optional Japanese — Japan-পক্ষের অভিভাবক katakana শহরের নাম দেখেন।
+    cityJa: { type: DataTypes.STRING, defaultValue: '' },
     address: { type: DataTypes.TEXT, defaultValue: '' },
     addressBn: { type: DataTypes.TEXT, defaultValue: '' },
+    addressJa: { type: DataTypes.TEXT, defaultValue: '' },
     // EN: Phones — array of strings, e.g. ["+880 1784-889646", "+880 1896-214840"].
     // BN: Phone-এর array — যেমন ["+880 1784-889646", "+880 1896-214840"]।
     phones: { type: DataTypes.JSONB, defaultValue: [] },

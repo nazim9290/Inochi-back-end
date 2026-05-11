@@ -11,11 +11,21 @@ const SiteSettings = sequelize.define(
     // Hero
     heroEyebrow: { type: DataTypes.STRING, defaultValue: '' },
     heroEyebrowEn: { type: DataTypes.STRING, defaultValue: '' },
+    // EN: Phase 5 added Japanese variants on hero/about/trust copy so the
+    //     Japanese audience sees native text instead of English fallback.
+    //     `heroTitleJp` is the legacy Japanese title field; new fields use
+    //     the project-wide `Ja` suffix going forward.
+    // BN: Phase 5-এ hero/about/trust copy-তে Japanese variant — Japanese
+    //     audience English fallback-এর বদলে native text দেখে। `heroTitleJp`
+    //     legacy Japanese title field; নতুন field-এ project-wide `Ja`
+    //     suffix।
+    heroEyebrowJa: { type: DataTypes.STRING, defaultValue: '' },
     heroTitle: { type: DataTypes.STRING(500), defaultValue: '' },
     heroTitleEn: { type: DataTypes.STRING(500), defaultValue: '' },
     heroTitleJp: { type: DataTypes.STRING, defaultValue: '' },
     heroSubtitle: { type: DataTypes.TEXT, defaultValue: '' },
     heroSubtitleEn: { type: DataTypes.TEXT, defaultValue: '' },
+    heroSubtitleJa: { type: DataTypes.TEXT, defaultValue: '' },
     heroCtaPrimary: { type: DataTypes.STRING, defaultValue: '' },
     heroCtaPrimaryEn: { type: DataTypes.STRING, defaultValue: '' },
     heroCtaPrimaryLink: { type: DataTypes.STRING, defaultValue: '' },
@@ -44,6 +54,7 @@ const SiteSettings = sequelize.define(
     bairaNumber: { type: DataTypes.STRING, defaultValue: '' },
     trustNote: { type: DataTypes.STRING, defaultValue: '' },
     trustNoteEn: { type: DataTypes.STRING, defaultValue: '' },
+    trustNoteJa: { type: DataTypes.STRING, defaultValue: '' },
 
     // Contact
     whatsappNumber: { type: DataTypes.STRING, defaultValue: '' },
@@ -71,8 +82,10 @@ const SiteSettings = sequelize.define(
     // About
     aboutHeading: { type: DataTypes.STRING(500), defaultValue: '' },
     aboutHeadingEn: { type: DataTypes.STRING(500), defaultValue: '' },
+    aboutHeadingJa: { type: DataTypes.STRING(500), defaultValue: '' },
     aboutBody: { type: DataTypes.TEXT, defaultValue: '' },
     aboutBodyEn: { type: DataTypes.TEXT, defaultValue: '' },
+    aboutBodyJa: { type: DataTypes.TEXT, defaultValue: '' },
     aboutImageUrl: { type: DataTypes.STRING(500), defaultValue: '' },
 
     // Facebook integration
@@ -110,8 +123,10 @@ const SiteSettings = sequelize.define(
     // built-in translations / hardcoded site name.
     siteTitle: { type: DataTypes.STRING(200), defaultValue: '' },
     siteTitleEn: { type: DataTypes.STRING(200), defaultValue: '' },
+    siteTitleJa: { type: DataTypes.STRING(200), defaultValue: '' },
     siteDescription: { type: DataTypes.TEXT, defaultValue: '' },
     siteDescriptionEn: { type: DataTypes.TEXT, defaultValue: '' },
+    siteDescriptionJa: { type: DataTypes.TEXT, defaultValue: '' },
     metaKeywords: { type: DataTypes.TEXT, defaultValue: '' }, // CSV: "japan study,jlpt,..."
     ogImageUrl: { type: DataTypes.STRING(500), defaultValue: '' }, // 1200x630 social card
 
