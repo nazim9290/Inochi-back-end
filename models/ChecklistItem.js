@@ -63,7 +63,6 @@ const ChecklistItem = sequelize.define(
   {
     tableName: 'checklist_items',
     timestamps: true,
-    indexes: [{ fields: ['categoryKey'] }],
   }
 );
 

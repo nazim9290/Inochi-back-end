@@ -49,7 +49,6 @@ const ScamItem = sequelize.define(
   {
     tableName: 'scam_items',
     timestamps: true,
-    indexes: [{ fields: ['kind'] }],
   }
 );
 
