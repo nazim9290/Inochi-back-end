@@ -17,6 +17,11 @@ router.get('/home-videos', c.listHomeVideos);
 router.get('/agency-moments', c.listAgencyMoments);
 router.get('/bd-cities', c.listBdCities);
 router.get('/bd-cities/:slug', c.getBdCity);
+router.get('/jp-cities', c.listJpCities);
+router.get('/jp-cities/:slug', c.getJpCity);
+router.get('/events', c.listEvents);
+router.get('/checklist', c.listChecklist);
+router.get('/scam-items', c.listScamItems);
 
 // Admin writes
 router.put('/site-settings', requireAuth, checkAdmin, c.updateSiteSettings);
@@ -56,5 +61,21 @@ router.delete('/agency-moments/:id', requireAuth, checkAdmin, c.deleteAgencyMome
 router.post('/bd-cities', requireAuth, checkAdmin, c.createBdCity);
 router.put('/bd-cities/:id', requireAuth, checkAdmin, c.updateBdCity);
 router.delete('/bd-cities/:id', requireAuth, checkAdmin, c.deleteBdCity);
+
+router.post('/jp-cities', requireAuth, checkAdmin, c.createJpCity);
+router.put('/jp-cities/:id', requireAuth, checkAdmin, c.updateJpCity);
+router.delete('/jp-cities/:id', requireAuth, checkAdmin, c.deleteJpCity);
+
+router.post('/events', requireAuth, checkAdmin, c.createEvent);
+router.put('/events/:id', requireAuth, checkAdmin, c.updateEvent);
+router.delete('/events/:id', requireAuth, checkAdmin, c.deleteEvent);
+
+router.post('/checklist', requireAuth, checkAdmin, c.createChecklistItem);
+router.put('/checklist/:id', requireAuth, checkAdmin, c.updateChecklistItem);
+router.delete('/checklist/:id', requireAuth, checkAdmin, c.deleteChecklistItem);
+
+router.post('/scam-items', requireAuth, checkAdmin, c.createScamItem);
+router.put('/scam-items/:id', requireAuth, checkAdmin, c.updateScamItem);
+router.delete('/scam-items/:id', requireAuth, checkAdmin, c.deleteScamItem);
 
 module.exports = router;

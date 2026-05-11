@@ -25,6 +25,10 @@ const SuccessStory = require('./SuccessStory');
 const Faq = require('./Faq');
 const Branch = require('./Branch');
 const BdCity = require('./BdCity');
+const JpCity = require('./JpCity');
+const Event = require('./Event');
+const ChecklistItem = require('./ChecklistItem');
+const ScamItem = require('./ScamItem');
 const Application = require('./Application');
 const AuditLog = require('./AuditLog');
 const Achievement = require('./Achievement');
@@ -102,6 +106,10 @@ module.exports = {
   Faq,
   Branch,
   BdCity,
+  JpCity,
+  Event,
+  ChecklistItem,
+  ScamItem,
   Application,
   AuditLog,
   Achievement,

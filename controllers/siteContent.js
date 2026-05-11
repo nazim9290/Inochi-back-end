@@ -6,6 +6,10 @@ const {
   Faq,
   Branch,
   BdCity,
+  JpCity,
+  Event,
+  ChecklistItem,
+  ScamItem,
   Achievement,
   HomeVideo,
   AgencyMoment,
@@ -665,6 +669,347 @@ exports.deleteBdCity = async (req, res) => {
     res.json({ message: 'City deleted' });
   } catch (err) {
     console.error('Error deleting bd city:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// ---------------- JP CITIES (Japan city guides) ----------------
+// EN: Public read collapses trilingual columns into the legacy {bn,en,ja}
+//     object shape so the existing renderer doesn't change. raw=true skips
+//     the reshape so the admin form sees per-language fields directly.
+// BN: Public read trilingual column-গুলোকে legacy {bn,en,ja} object
+//     shape-এ collapse করে — existing renderer পাল্টায় না। raw=true
+//     reshape skip করে — admin form per-language field সরাসরি দেখে।
+
+const shapeJpCity = (city) => {
+  const c = city.toJSON ? city.toJSON() : city;
+  return {
+    slug: c.slug,
+    name: triLang(c.name, c.nameEn, c.nameJa),
+    kanji: c.kanji || '',
+    tagline: triLang(c.tagline, c.taglineEn, c.taglineJa),
+    monthlyLiving: c.monthlyLiving || '',
+    monthlyRent: c.monthlyRent || '',
+    partTimeWage: c.partTimeWage || '',
+    transportPass: c.transportPass || '',
+    climate: triLang(c.climate, c.climateEn, c.climateJa),
+    heroImage: c.heroImage || '',
+    topSchools: Array.isArray(c.topSchools) ? c.topSchools : [],
+    highlights: Array.isArray(c.highlights) ? c.highlights : [],
+    tradeOffs: Array.isArray(c.tradeOffs) ? c.tradeOffs : [],
+  };
+};
+
+exports.listJpCities = async (req, res) => {
+  try {
+    const where = req.query.all === 'true' ? {} : { published: true };
+    const rows = await JpCity.findAll({
+      where,
+      order: [['sortOrder', 'ASC'], ['name', 'ASC']],
+    });
+    const cities = req.query.raw === 'true' ? rows : rows.map(shapeJpCity);
+    res.json({ cities });
+  } catch (err) {
+    console.error('Error listing jp cities:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.getJpCity = async (req, res) => {
+  try {
+    const row = await JpCity.findOne({ where: { slug: req.params.slug } });
+    if (!row) return res.status(404).json({ error: 'City not found' });
+    const city = req.query.raw === 'true' ? row : shapeJpCity(row);
+    res.json({ city });
+  } catch (err) {
+    console.error('Error fetching jp city:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createJpCity = async (req, res) => {
+  try {
+    const city = await JpCity.create(req.body);
+    logAudit(req, { action: 'create', entity: 'JpCity', entityId: city.id, summary: `JP city added (${city.name || city.slug})` });
+    res.status(201).json({ message: 'City created', city });
+  } catch (err) {
+    console.error('Error creating jp city:', err);
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ error: 'এই slug ইতিমধ্যে আছে — অন্য একটা দিন।' });
+    }
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateJpCity = async (req, res) => {
+  try {
+    const city = await JpCity.findByPk(req.params.id);
+    if (!city) return res.status(404).json({ error: 'City not found' });
+    await city.update(req.body);
+    logAudit(req, { action: 'update', entity: 'JpCity', entityId: city.id, summary: `JP city updated (${city.name || city.slug})` });
+    res.json({ message: 'City updated', city });
+  } catch (err) {
+    console.error('Error updating jp city:', err);
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ error: 'এই slug ইতিমধ্যে আছে — অন্য একটা দিন।' });
+    }
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteJpCity = async (req, res) => {
+  try {
+    const deleted = await JpCity.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'City not found' });
+    logAudit(req, { action: 'delete', entity: 'JpCity', entityId: req.params.id, summary: 'JP city deleted' });
+    res.json({ message: 'City deleted' });
+  } catch (err) {
+    console.error('Error deleting jp city:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// ---------------- EVENTS ----------------
+// EN: Reshape returns the legacy `events-calendar.json` row shape so the
+//     existing /events renderer doesn't need to change.
+// BN: Reshape legacy `events-calendar.json` row shape return করে —
+//     existing /events renderer পাল্টায় না।
+
+const shapeEvent = (event) => {
+  const e = event.toJSON ? event.toJSON() : event;
+  return {
+    id: e.id,
+    type: e.type || 'seminar',
+    title: triLang(e.title, e.titleEn, e.titleJa),
+    description: triLang(e.description, e.descriptionEn, e.descriptionJa),
+    date: e.eventDate,
+    time: e.time || '',
+    durationMin: e.durationMin || 60,
+    location: triLang(e.location, e.locationEn, e.locationJa),
+    city: e.city || '',
+    rsvpUrl: e.rsvpUrl || '',
+    heroImage: e.heroImage || '',
+    isFree: !!e.isFree,
+    fee: e.fee || '',
+    highlight: !!e.highlight,
+  };
+};
+
+exports.listEvents = async (req, res) => {
+  try {
+    const where = req.query.all === 'true' ? {} : { published: true };
+    if (req.query.type) where.type = req.query.type;
+    const rows = await Event.findAll({
+      where,
+      order: [['highlight', 'DESC'], ['eventDate', 'ASC'], ['sortOrder', 'ASC']],
+    });
+    const events = req.query.raw === 'true' ? rows : rows.map(shapeEvent);
+    res.json({ events });
+  } catch (err) {
+    console.error('Error listing events:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createEvent = async (req, res) => {
+  try {
+    const event = await Event.create(req.body);
+    logAudit(req, { action: 'create', entity: 'Event', entityId: event.id, summary: `Event added (${event.title})` });
+    res.status(201).json({ message: 'Event created', event });
+  } catch (err) {
+    console.error('Error creating event:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateEvent = async (req, res) => {
+  try {
+    const event = await Event.findByPk(req.params.id);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    await event.update(req.body);
+    logAudit(req, { action: 'update', entity: 'Event', entityId: event.id, summary: `Event updated (${event.title})` });
+    res.json({ message: 'Event updated', event });
+  } catch (err) {
+    console.error('Error updating event:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteEvent = async (req, res) => {
+  try {
+    const deleted = await Event.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'Event not found' });
+    logAudit(req, { action: 'delete', entity: 'Event', entityId: req.params.id, summary: 'Event deleted' });
+    res.json({ message: 'Event deleted' });
+  } catch (err) {
+    console.error('Error deleting event:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// ---------------- DOCUMENT CHECKLIST ----------------
+// EN: Public read groups flat ChecklistItem rows by categoryKey and emits
+//     the legacy { categories: [{ key, label, items: [...] }, ...] } shape.
+//     Admin reads (raw=true) get flat rows so the form edits one item at
+//     a time.
+// BN: Public read flat ChecklistItem row-গুলোকে categoryKey দিয়ে group
+//     করে legacy { categories: [{ key, label, items: [...] }, ...] }
+//     shape emit করে। Admin read (raw=true) flat row পায় — form একসাথে
+//     এক item edit করে।
+
+exports.listChecklist = async (req, res) => {
+  try {
+    const where = req.query.all === 'true' ? {} : { published: true };
+    const rows = await ChecklistItem.findAll({
+      where,
+      order: [['groupOrder', 'ASC'], ['sortOrder', 'ASC'], ['createdAt', 'ASC']],
+    });
+
+    if (req.query.raw === 'true') {
+      return res.json({ items: rows });
+    }
+
+    // EN: Group by categoryKey, preserve insertion order. First item of
+    //     each group provides the canonical category label.
+    // BN: categoryKey দিয়ে group, insertion order ধরে রাখি। প্রতিটা
+    //     group-এর প্রথম item canonical category label দেয়।
+    const grouped = new Map();
+    for (const r of rows) {
+      const c = r.toJSON();
+      if (!grouped.has(c.categoryKey)) {
+        grouped.set(c.categoryKey, {
+          key: c.categoryKey,
+          label: triLang(c.categoryLabel, c.categoryLabelEn, c.categoryLabelJa),
+          items: [],
+        });
+      }
+      grouped.get(c.categoryKey).items.push({
+        id: c.id,
+        label: triLang(c.label, c.labelEn, c.labelJa),
+        note: triLang(c.note, c.noteEn),
+      });
+    }
+    res.json({ categories: Array.from(grouped.values()) });
+  } catch (err) {
+    console.error('Error listing checklist:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createChecklistItem = async (req, res) => {
+  try {
+    const item = await ChecklistItem.create(req.body);
+    logAudit(req, { action: 'create', entity: 'ChecklistItem', entityId: item.id, summary: `Checklist item added (${item.categoryKey})` });
+    res.status(201).json({ message: 'Item created', item });
+  } catch (err) {
+    console.error('Error creating checklist item:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateChecklistItem = async (req, res) => {
+  try {
+    const item = await ChecklistItem.findByPk(req.params.id);
+    if (!item) return res.status(404).json({ error: 'Item not found' });
+    await item.update(req.body);
+    logAudit(req, { action: 'update', entity: 'ChecklistItem', entityId: item.id, summary: `Checklist item updated (${item.categoryKey})` });
+    res.json({ message: 'Item updated', item });
+  } catch (err) {
+    console.error('Error updating checklist item:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteChecklistItem = async (req, res) => {
+  try {
+    const deleted = await ChecklistItem.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'Item not found' });
+    logAudit(req, { action: 'delete', entity: 'ChecklistItem', entityId: req.params.id, summary: 'Checklist item deleted' });
+    res.json({ message: 'Item deleted' });
+  } catch (err) {
+    console.error('Error deleting checklist item:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// ---------------- SCAM ITEMS (Anti-scam page) ----------------
+// EN: Public read partitions by `kind` and emits the legacy
+//     { redFlags: [...], checks: [...] } shape so the existing
+//     /anti-scam renderer doesn't need to change.
+// BN: Public read `kind` দিয়ে partition করে legacy
+//     { redFlags: [...], checks: [...] } shape emit করে — existing
+//     /anti-scam renderer পাল্টায় না।
+
+const shapeScamItem = (item) => {
+  const s = item.toJSON ? item.toJSON() : item;
+  const out = {
+    key: s.itemKey || s.id,
+    title: triLang(s.title, s.titleEn, s.titleJa),
+  };
+  if (s.kind === 'redflag') {
+    out.body = triLang(s.body, s.bodyEn, s.bodyJa);
+  }
+  return out;
+};
+
+exports.listScamItems = async (req, res) => {
+  try {
+    const where = req.query.all === 'true' ? {} : { published: true };
+    const rows = await ScamItem.findAll({
+      where,
+      order: [['sortOrder', 'ASC'], ['createdAt', 'ASC']],
+    });
+
+    if (req.query.raw === 'true') {
+      return res.json({ items: rows });
+    }
+
+    const redFlags = [];
+    const checks = [];
+    for (const r of rows) {
+      const shaped = shapeScamItem(r);
+      if (r.kind === 'check') checks.push(shaped);
+      else redFlags.push(shaped);
+    }
+    res.json({ redFlags, checks });
+  } catch (err) {
+    console.error('Error listing scam items:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createScamItem = async (req, res) => {
+  try {
+    const item = await ScamItem.create(req.body);
+    logAudit(req, { action: 'create', entity: 'ScamItem', entityId: item.id, summary: `Scam item added (${item.kind})` });
+    res.status(201).json({ message: 'Item created', item });
+  } catch (err) {
+    console.error('Error creating scam item:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateScamItem = async (req, res) => {
+  try {
+    const item = await ScamItem.findByPk(req.params.id);
+    if (!item) return res.status(404).json({ error: 'Item not found' });
+    await item.update(req.body);
+    logAudit(req, { action: 'update', entity: 'ScamItem', entityId: item.id, summary: `Scam item updated (${item.kind})` });
+    res.json({ message: 'Item updated', item });
+  } catch (err) {
+    console.error('Error updating scam item:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteScamItem = async (req, res) => {
+  try {
+    const deleted = await ScamItem.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'Item not found' });
+    logAudit(req, { action: 'delete', entity: 'ScamItem', entityId: req.params.id, summary: 'Scam item deleted' });
+    res.json({ message: 'Item deleted' });
+  } catch (err) {
+    console.error('Error deleting scam item:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
