@@ -44,6 +44,7 @@ app.use('/api', require('./routes/data'));
 app.use('/api', require('./routes/questionRoute'));
 app.use('/api', require('./routes/userRoute'));
 app.use('/api', require('./routes/siteContent'));
+app.use('/api', require('./routes/indexnow'));
 app.use('/api', require('./routes/applications'));
 app.use('/api', require('./routes/reviews'));
 app.use('/api', require('./routes/imageLibrary'));

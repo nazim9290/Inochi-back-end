@@ -3,7 +3,14 @@
 const { requireAuth } = require("../middleware/auth")
 const { checkAdmin } = require("../middleware/admin");
 const express = require("express")
+const indexnow = require("../helpers/indexnow");
 const router = express.Router();
+
+// EN: IndexNow ping for blog publish/update/delete — re-crawls the post URL
+//     + the blog index across all locales. Fire-and-forget; never blocks.
+// BN: blog publish/update/delete-এ IndexNow ping — post URL + blog index
+//     সব locale-এ re-crawl করায়। Fire-and-forget; কখনো block করে না।
+const blogPing = indexnow.pingIndexNow((req) => [`/blog/${req.params.id}`, '/blog']);
 // controllers
 const { createBlog, updateBlog, allPublishedBlog,
         deleteBlogById,
@@ -24,14 +31,14 @@ const { createBlog, updateBlog, allPublishedBlog,
         CreateCarusel } = require("../controllers/blogControlar");
 
 router.post("/create-blog", requireAuth, createBlog);
-router.put("/update-blog/:id", requireAuth, checkAdmin, updateBlog);
+router.put("/update-blog/:id", requireAuth, checkAdmin, blogPing, updateBlog);
 router.post("/blog/:id/post-to-facebook", requireAuth, checkAdmin, postBlogToFacebook);
 router.get("/facebook/check", requireAuth, checkAdmin, checkFacebookConnection);
 router.get('/pending-blogs', requireAuth, checkAdmin, allPendingBlog);
-router.get('/blog/:id', requireAuth, checkAdmin, singleBlog);
-router.delete('/blog/:id', requireAuth, checkAdmin, deleteBlogById);
-// 
-router.put('/approve-blog/:id',singlgleBlogTags)
+router.get('/blog/:id', requireAuth, checkAdmin, blogPing, singleBlog);
+router.delete('/blog/:id', requireAuth, checkAdmin, blogPing, deleteBlogById);
+//
+router.put('/approve-blog/:id', blogPing, singlgleBlogTags)
 router.put('/publised-single-blog/:id', requireAuth, checkAdmin, singleBlogconvert);
 // 
 // 

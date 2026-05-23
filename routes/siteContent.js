@@ -2,8 +2,55 @@ const express = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { checkAdmin } = require('../middleware/admin');
 const c = require('../controllers/siteContent');
+const indexnow = require('../helpers/indexnow');
 
 const router = express.Router();
+
+// EN: IndexNow auto-ping map. Keyed by the first route segment (e.g. a
+//     request to "/bd-cities/:id" → key "bd-cities"). On a successful POST/
+//     PUT/DELETE, the matching public listing path(s) are pinged, plus a
+//     detail path built from the response body where the page exists.
+// BN: IndexNow auto-ping map। Route-এর প্রথম segment দিয়ে keyed (যেমন
+//     "/bd-cities/:id" request → key "bd-cities")। সফল POST/PUT/DELETE-এ
+//     সংশ্লিষ্ট public listing path ping হয়, এবং detail page থাকলে response
+//     body থেকে detail path-ও।
+const PING_MAP = {
+  'site-settings': { paths: ['/', '/contact', '/about'] },
+  'how-it-works': { paths: ['/pathway'] },
+  'jlpt-courses': { paths: ['/learn'] },
+  'success-stories': {
+    paths: ['/success'],
+    detail: (b) => (b && b.story && b.story.id ? `/success/${b.story.id}` : null),
+  },
+  faqs: { paths: ['/faq'] },
+  branches: {
+    paths: ['/about/branches'],
+    detail: (b) => (b && b.branch && b.branch.slug ? `/branches/${b.branch.slug}` : null),
+  },
+  achievements: {
+    paths: ['/achievements'],
+    detail: (b) => (b && b.achievement && b.achievement.id ? `/achievements/${b.achievement.id}` : null),
+  },
+  'home-videos': { paths: ['/'] },
+  'agency-moments': { paths: ['/'] },
+  'bd-cities': {
+    paths: ['/study-from'],
+    detail: (b) => (b && b.city && b.city.slug ? `/study-from/${b.city.slug}` : null),
+  },
+  'jp-cities': {
+    paths: ['/japan-cities'],
+    detail: (b) => (b && b.city && b.city.slug ? `/japan-cities/${b.city.slug}` : null),
+  },
+  events: { paths: ['/events'] },
+  checklist: { paths: ['/document-checklist'] },
+  'scam-items': { paths: ['/anti-scam'] },
+};
+
+// EN: Runs for every route on this router; skips GET internally, pings only
+//     on successful mutations. Placed before route defs so it wraps them all.
+// BN: এই router-এর প্রতিটা route-এ চলে; ভেতরে GET skip করে, শুধু সফল
+//     mutation-এ ping। Route def-এর আগে রাখা যাতে সব wrap করে।
+router.use(indexnow.autoPing(PING_MAP));
 
 // Public reads
 router.get('/site-settings', c.getSiteSettings);
