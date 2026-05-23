@@ -37,6 +37,9 @@ const AgencyMoment = require('./AgencyMoment');
 const BlogReaction = require('./BlogReaction');
 const BlogComment = require('./BlogComment');
 const BlogBookmark = require('./BlogBookmark');
+const SchoolContact = require('./SchoolContact');
+const EmailGroup = require('./EmailGroup');
+const EmailLog = require('./EmailLog');
 
 // Associations
 User.hasMany(Blog, { foreignKey: 'authorId', as: 'blogs' });
@@ -118,4 +121,7 @@ module.exports = {
   BlogReaction,
   BlogComment,
   BlogBookmark,
+  SchoolContact,
+  EmailGroup,
+  EmailLog,
 };

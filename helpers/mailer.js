@@ -397,3 +397,23 @@ exports.testConnection = async () => {
     return { ok: false, reason: err.message };
   }
 };
+
+// EN: Low-level generic send for the school-outreach feature, where the admin
+//     supplies the full subject + HTML body and (optionally) a Reply-To. The
+//     outreach controller owns the recipient loop + personalization; this just
+//     hands one message to the transporter. Resolves {sent} / {sent:false,reason}.
+// BN: school-outreach feature-এর জন্য low-level generic send — admin নিজে
+//     subject + HTML body + (optional) Reply-To দেয়। recipient loop +
+//     personalization controller সামলায়; এটা শুধু একটা message transporter-কে
+//     দেয়। {sent} / {sent:false,reason} resolve করে।
+exports.sendMail = (opts) => send(opts);
+
+// EN: Wrap arbitrary content HTML in the Inochi-branded shell (navy header +
+//     footer). Exposed so outreach mails can optionally look on-brand.
+// BN: যেকোনো content HTML-কে Inochi-branded shell-এ (navy header + footer)
+//     wrap করে। Outreach মেইল চাইলে on-brand দেখাতে expose করা।
+exports.brandWrap = (title, contentHtml) => wrap(title, contentHtml);
+
+// EN: True when SMTP credentials are present so the UI can warn early.
+// BN: SMTP credential থাকলে true — UI আগেই warn করতে পারে।
+exports.smtpReady = () => Boolean(buildTransporter());
