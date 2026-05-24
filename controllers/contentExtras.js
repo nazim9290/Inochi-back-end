@@ -20,6 +20,8 @@ const {
   VisaInterviewItem,
   QuizQuestion,
   QuizTier,
+  MockTest,
+  MockQuestion,
 } = require('../models');
 
 // EN: bn primary + en/ja fallbacks → the {en,bn,ja} object the pages read.
@@ -533,6 +535,135 @@ exports.deleteQuizTier = async (req, res) => {
     res.json({ message: 'Tier deleted' });
   } catch (err) {
     console.error('deleteQuizTier:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/* ------------------------------ JLPT mock test --------------------------- */
+
+// EN: Combined public payload: each published level's config + its published
+//     questions (reshaped; options kept as stored). totalQuestions computed.
+// BN: একত্রিত public payload: প্রতি published level-এর config + তার published
+//     প্রশ্ন (reshaped; options যেমন আছে)। totalQuestions গণনা করা।
+exports.getMockTest = async (req, res) => {
+  try {
+    const [tests, questions] = await Promise.all([
+      MockTest.findAll({ where: { published: true }, order: [['sortOrder', 'ASC'], ['level', 'ASC']] }),
+      MockQuestion.findAll({ where: { published: true }, order: [['sortOrder', 'ASC'], ['createdAt', 'ASC']] }),
+    ]);
+    const byLevel = {};
+    questions.forEach((q) => {
+      (byLevel[q.level] = byLevel[q.level] || []).push({
+        id: q.id,
+        category: q.category || 'vocabulary',
+        prompt: triLang(q.prompt, q.promptEn, q.promptJa),
+        options: Array.isArray(q.options) ? q.options : [],
+        correct: q.correct || '',
+        explanation: triLang(q.explanation, q.explanationEn, q.explanationJa),
+      });
+    });
+    const shaped = tests.map((t) => ({
+      level: t.level,
+      duration: t.duration,
+      passingScore: t.passingScore,
+      totalQuestions: (byLevel[t.level] || []).length,
+      description: triLang(t.description, t.descriptionEn, t.descriptionJa),
+      questions: byLevel[t.level] || [],
+    }));
+    res.json({ tests: shaped });
+  } catch (err) {
+    console.error('getMockTest:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// Mock test configs — admin
+exports.listMockTests = async (req, res) => {
+  try {
+    const rows = await MockTest.findAll({ order: [['sortOrder', 'ASC'], ['level', 'ASC']] });
+    res.json({ tests: rows });
+  } catch (err) {
+    console.error('listMockTests:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createMockTest = async (req, res) => {
+  try {
+    if (!req.body.level) return res.status(400).json({ error: 'Level is required.' });
+    const test = await MockTest.create(req.body);
+    res.status(201).json({ message: 'Test created', test });
+  } catch (err) {
+    if (err.name === 'SequelizeUniqueConstraintError') return res.status(409).json({ error: 'That level already exists.' });
+    console.error('createMockTest:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateMockTest = async (req, res) => {
+  try {
+    const test = await MockTest.findByPk(req.params.id);
+    if (!test) return res.status(404).json({ error: 'Test not found' });
+    await test.update(req.body || {});
+    res.json({ message: 'Test updated', test });
+  } catch (err) {
+    console.error('updateMockTest:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteMockTest = async (req, res) => {
+  try {
+    const deleted = await MockTest.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'Test not found' });
+    res.json({ message: 'Test deleted' });
+  } catch (err) {
+    console.error('deleteMockTest:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// Mock questions — admin (optional ?level= filter)
+exports.listMockQuestions = async (req, res) => {
+  try {
+    const where = req.query.level ? { level: req.query.level } : {};
+    const rows = await MockQuestion.findAll({ where, order: [['level', 'ASC'], ['sortOrder', 'ASC'], ['createdAt', 'ASC']] });
+    res.json({ questions: rows });
+  } catch (err) {
+    console.error('listMockQuestions:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createMockQuestion = async (req, res) => {
+  try {
+    const question = await MockQuestion.create(req.body);
+    res.status(201).json({ message: 'Question created', question });
+  } catch (err) {
+    console.error('createMockQuestion:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateMockQuestion = async (req, res) => {
+  try {
+    const question = await MockQuestion.findByPk(req.params.id);
+    if (!question) return res.status(404).json({ error: 'Question not found' });
+    await question.update(req.body || {});
+    res.json({ message: 'Question updated', question });
+  } catch (err) {
+    console.error('updateMockQuestion:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteMockQuestion = async (req, res) => {
+  try {
+    const deleted = await MockQuestion.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'Question not found' });
+    res.json({ message: 'Question deleted' });
+  } catch (err) {
+    console.error('deleteMockQuestion:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

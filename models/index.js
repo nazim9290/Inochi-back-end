@@ -48,6 +48,8 @@ const JlptSession = require('./JlptSession');
 const VisaInterviewItem = require('./VisaInterviewItem');
 const QuizQuestion = require('./QuizQuestion');
 const QuizTier = require('./QuizTier');
+const MockTest = require('./MockTest');
+const MockQuestion = require('./MockQuestion');
 
 // Associations
 User.hasMany(Blog, { foreignKey: 'authorId', as: 'blogs' });
@@ -140,4 +142,6 @@ module.exports = {
   VisaInterviewItem,
   QuizQuestion,
   QuizTier,
+  MockTest,
+  MockQuestion,
 };

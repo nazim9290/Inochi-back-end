@@ -23,6 +23,8 @@ router.use(
     'visa-interview': { paths: ['/visa-interview'] },
     'quiz-questions': { paths: ['/eligibility'] },
     'quiz-tiers': { paths: ['/eligibility'] },
+    'mock-tests': { paths: ['/jlpt-mock-test'] },
+    'mock-questions': { paths: ['/jlpt-mock-test'] },
   })
 );
 
@@ -74,5 +76,16 @@ router.get('/quiz-tiers', ...admin, c.listQuizTiers);
 router.post('/quiz-tiers', ...admin, c.createQuizTier);
 router.put('/quiz-tiers/:id', ...admin, c.updateQuizTier);
 router.delete('/quiz-tiers/:id', ...admin, c.deleteQuizTier);
+
+// JLPT mock test (/jlpt-mock-test) — combined public payload + admin CRUD
+router.get('/mock-test', c.getMockTest);
+router.get('/mock-tests', ...admin, c.listMockTests);
+router.post('/mock-tests', ...admin, c.createMockTest);
+router.put('/mock-tests/:id', ...admin, c.updateMockTest);
+router.delete('/mock-tests/:id', ...admin, c.deleteMockTest);
+router.get('/mock-questions', ...admin, c.listMockQuestions);
+router.post('/mock-questions', ...admin, c.createMockQuestion);
+router.put('/mock-questions/:id', ...admin, c.updateMockQuestion);
+router.delete('/mock-questions/:id', ...admin, c.deleteMockQuestion);
 
 module.exports = router;
