@@ -18,6 +18,8 @@ const {
   CommunityChannel,
   JlptSession,
   VisaInterviewItem,
+  QuizQuestion,
+  QuizTier,
 } = require('../models');
 
 // EN: bn primary + en/ja fallbacks → the {en,bn,ja} object the pages read.
@@ -401,6 +403,136 @@ exports.deleteVisaItem = async (req, res) => {
     res.json({ message: 'Item deleted' });
   } catch (err) {
     console.error('deleteVisaItem:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/* ----------------------------- Eligibility quiz -------------------------- */
+
+// EN: Combined public quiz payload — questions (reshaped) + result tiers
+//     (reshaped) + computed maxScore (sum of each question's top option score).
+//     Options stay in their stored {value,score,label:{en,bn,ja}} shape since
+//     the page reads them directly.
+// BN: একত্রিত public কুইজ payload — questions (reshaped) + tiers (reshaped) +
+//     হিসাব-করা maxScore (প্রতি প্রশ্নের সর্বোচ্চ option score-এর যোগফল)।
+//     Options stored {value,score,label:{en,bn,ja}} shape-এই থাকে, page
+//     সরাসরি পড়ে।
+exports.getEligibilityQuiz = async (req, res) => {
+  try {
+    const [qRows, tRows] = await Promise.all([
+      QuizQuestion.findAll({ where: { published: true }, order: [['sortOrder', 'ASC'], ['createdAt', 'ASC']] }),
+      QuizTier.findAll({ where: { published: true }, order: [['min', 'DESC']] }),
+    ]);
+    const questions = qRows.map((r) => ({
+      id: r.questionKey,
+      question: triLang(r.question, r.questionEn, r.questionJa),
+      help: triLang(r.help, r.helpEn, r.helpJa),
+      options: Array.isArray(r.options) ? r.options : [],
+    }));
+    const tiers = tRows.map((r) => ({
+      key: r.tierKey,
+      min: r.min,
+      label: triLang(r.label, r.labelEn, r.labelJa),
+      body: triLang(r.body, r.bodyEn, r.bodyJa),
+      tone: r.tone || 'info',
+    }));
+    const maxScore = questions.reduce(
+      (sum, q) => sum + (q.options.length ? Math.max(...q.options.map((o) => Number(o.score) || 0)) : 0),
+      0
+    );
+    res.json({ maxScore, questions, tiers });
+  } catch (err) {
+    console.error('getEligibilityQuiz:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// Quiz questions — admin raw list + CRUD
+exports.listQuizQuestions = async (req, res) => {
+  try {
+    const rows = await QuizQuestion.findAll({ order: [['sortOrder', 'ASC'], ['createdAt', 'ASC']] });
+    res.json({ questions: rows });
+  } catch (err) {
+    console.error('listQuizQuestions:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createQuizQuestion = async (req, res) => {
+  try {
+    if (!req.body.questionKey) return res.status(400).json({ error: 'Question key is required.' });
+    const question = await QuizQuestion.create(req.body);
+    res.status(201).json({ message: 'Question created', question });
+  } catch (err) {
+    if (err.name === 'SequelizeUniqueConstraintError') return res.status(409).json({ error: 'questionKey already exists.' });
+    console.error('createQuizQuestion:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateQuizQuestion = async (req, res) => {
+  try {
+    const question = await QuizQuestion.findByPk(req.params.id);
+    if (!question) return res.status(404).json({ error: 'Question not found' });
+    await question.update(req.body || {});
+    res.json({ message: 'Question updated', question });
+  } catch (err) {
+    console.error('updateQuizQuestion:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteQuizQuestion = async (req, res) => {
+  try {
+    const deleted = await QuizQuestion.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'Question not found' });
+    res.json({ message: 'Question deleted' });
+  } catch (err) {
+    console.error('deleteQuizQuestion:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// Quiz tiers — admin raw list + CRUD
+exports.listQuizTiers = async (req, res) => {
+  try {
+    const rows = await QuizTier.findAll({ order: [['min', 'DESC']] });
+    res.json({ tiers: rows });
+  } catch (err) {
+    console.error('listQuizTiers:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createQuizTier = async (req, res) => {
+  try {
+    const tier = await QuizTier.create(req.body);
+    res.status(201).json({ message: 'Tier created', tier });
+  } catch (err) {
+    console.error('createQuizTier:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateQuizTier = async (req, res) => {
+  try {
+    const tier = await QuizTier.findByPk(req.params.id);
+    if (!tier) return res.status(404).json({ error: 'Tier not found' });
+    await tier.update(req.body || {});
+    res.json({ message: 'Tier updated', tier });
+  } catch (err) {
+    console.error('updateQuizTier:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteQuizTier = async (req, res) => {
+  try {
+    const deleted = await QuizTier.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'Tier not found' });
+    res.json({ message: 'Tier deleted' });
+  } catch (err) {
+    console.error('deleteQuizTier:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

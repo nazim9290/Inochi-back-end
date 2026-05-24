@@ -46,6 +46,8 @@ const PressMention = require('./PressMention');
 const CommunityChannel = require('./CommunityChannel');
 const JlptSession = require('./JlptSession');
 const VisaInterviewItem = require('./VisaInterviewItem');
+const QuizQuestion = require('./QuizQuestion');
+const QuizTier = require('./QuizTier');
 
 // Associations
 User.hasMany(Blog, { foreignKey: 'authorId', as: 'blogs' });
@@ -136,4 +138,6 @@ module.exports = {
   CommunityChannel,
   JlptSession,
   VisaInterviewItem,
+  QuizQuestion,
+  QuizTier,
 };

@@ -21,6 +21,8 @@ router.use(
     community: { paths: ['/community'] },
     'jlpt-sessions': { paths: ['/jlpt-calendar'] },
     'visa-interview': { paths: ['/visa-interview'] },
+    'quiz-questions': { paths: ['/eligibility'] },
+    'quiz-tiers': { paths: ['/eligibility'] },
   })
 );
 
@@ -61,5 +63,16 @@ router.get('/visa-interview', c.listVisaInterview);
 router.post('/visa-interview', ...admin, c.createVisaItem);
 router.put('/visa-interview/:id', ...admin, c.updateVisaItem);
 router.delete('/visa-interview/:id', ...admin, c.deleteVisaItem);
+
+// Eligibility quiz (/eligibility) — combined public payload + admin CRUD
+router.get('/eligibility-quiz', c.getEligibilityQuiz);
+router.get('/quiz-questions', ...admin, c.listQuizQuestions);
+router.post('/quiz-questions', ...admin, c.createQuizQuestion);
+router.put('/quiz-questions/:id', ...admin, c.updateQuizQuestion);
+router.delete('/quiz-questions/:id', ...admin, c.deleteQuizQuestion);
+router.get('/quiz-tiers', ...admin, c.listQuizTiers);
+router.post('/quiz-tiers', ...admin, c.createQuizTier);
+router.put('/quiz-tiers/:id', ...admin, c.updateQuizTier);
+router.delete('/quiz-tiers/:id', ...admin, c.deleteQuizTier);
 
 module.exports = router;
