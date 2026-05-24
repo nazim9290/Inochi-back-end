@@ -26,6 +26,7 @@ router.use(
     'mock-tests': { paths: ['/jlpt-mock-test'] },
     'mock-questions': { paths: ['/jlpt-mock-test'] },
     intakes: { paths: ['/intake'], detail: (b) => (b && b.intake && b.intake.slug ? `/intake/${b.intake.slug}` : null) },
+    'partner-universities': { paths: ['/universities'], detail: (b) => (b && b.university && b.university.slug ? `/universities/${b.university.slug}` : null) },
   })
 );
 
@@ -94,5 +95,11 @@ router.get('/intakes', c.listIntakes);
 router.post('/intakes', ...admin, c.createIntake);
 router.put('/intakes/:id', ...admin, c.updateIntake);
 router.delete('/intakes/:id', ...admin, c.deleteIntake);
+
+// Partner universities (/universities, /universities/[slug])
+router.get('/partner-universities', c.listUniversities);
+router.post('/partner-universities', ...admin, c.createUniversity);
+router.put('/partner-universities/:id', ...admin, c.updateUniversity);
+router.delete('/partner-universities/:id', ...admin, c.deleteUniversity);
 
 module.exports = router;

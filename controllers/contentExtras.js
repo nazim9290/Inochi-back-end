@@ -23,6 +23,7 @@ const {
   MockTest,
   MockQuestion,
   Intake,
+  University,
 } = require('../models');
 
 // EN: bn primary + en/ja fallbacks → the {en,bn,ja} object the pages read.
@@ -729,6 +730,72 @@ exports.deleteIntake = async (req, res) => {
     res.json({ message: 'Intake deleted' });
   } catch (err) {
     console.error('deleteIntake:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/* ------------------------- Partner universities -------------------------- */
+
+const shapeUniversity = (r) => ({
+  slug: r.slug,
+  name: r.name,
+  kanji: r.kanji || '',
+  city: r.city || '',
+  established: r.established || 0,
+  tagline: triLang(r.tagline, r.taglineEn, r.taglineJa),
+  tuitionAnnual: r.tuitionAnnual || '',
+  applicationFee: r.applicationFee || '',
+  duration: Array.isArray(r.duration) ? r.duration : [],
+  intakes: Array.isArray(r.intakes) ? r.intakes : [],
+  jlptStart: r.jlptStart || '',
+  studentCapacity: r.studentCapacity || 0,
+  highlights: Array.isArray(r.highlights) ? r.highlights : [],
+});
+
+exports.listUniversities = async (req, res) => {
+  try {
+    const rows = await University.findAll({
+      where: onlyPublished(req),
+      order: [['sortOrder', 'ASC'], ['name', 'ASC']],
+    });
+    res.json({ universities: req.query.all === 'true' ? rows : rows.map(shapeUniversity) });
+  } catch (err) {
+    console.error('listUniversities:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createUniversity = async (req, res) => {
+  try {
+    if (!req.body.slug || !req.body.name) return res.status(400).json({ error: 'Slug and name are required.' });
+    const university = await University.create(req.body);
+    res.status(201).json({ message: 'University created', university });
+  } catch (err) {
+    if (err.name === 'SequelizeUniqueConstraintError') return res.status(409).json({ error: 'slug already exists.' });
+    console.error('createUniversity:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateUniversity = async (req, res) => {
+  try {
+    const university = await University.findByPk(req.params.id);
+    if (!university) return res.status(404).json({ error: 'University not found' });
+    await university.update(req.body || {});
+    res.json({ message: 'University updated', university });
+  } catch (err) {
+    console.error('updateUniversity:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteUniversity = async (req, res) => {
+  try {
+    const deleted = await University.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'University not found' });
+    res.json({ message: 'University deleted' });
+  } catch (err) {
+    console.error('deleteUniversity:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
