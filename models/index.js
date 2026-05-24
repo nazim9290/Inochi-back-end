@@ -40,6 +40,10 @@ const BlogBookmark = require('./BlogBookmark');
 const SchoolContact = require('./SchoolContact');
 const EmailGroup = require('./EmailGroup');
 const EmailLog = require('./EmailLog');
+const GlossaryTerm = require('./GlossaryTerm');
+const UniversityRanking = require('./UniversityRanking');
+const PressMention = require('./PressMention');
+const CommunityChannel = require('./CommunityChannel');
 
 // Associations
 User.hasMany(Blog, { foreignKey: 'authorId', as: 'blogs' });
@@ -124,4 +128,8 @@ module.exports = {
   SchoolContact,
   EmailGroup,
   EmailLog,
+  GlossaryTerm,
+  UniversityRanking,
+  PressMention,
+  CommunityChannel,
 };
