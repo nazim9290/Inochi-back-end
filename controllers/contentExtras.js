@@ -22,6 +22,7 @@ const {
   QuizTier,
   MockTest,
   MockQuestion,
+  Intake,
 } = require('../models');
 
 // EN: bn primary + en/ja fallbacks → the {en,bn,ja} object the pages read.
@@ -664,6 +665,70 @@ exports.deleteMockQuestion = async (req, res) => {
     res.json({ message: 'Question deleted' });
   } catch (err) {
     console.error('deleteMockQuestion:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/* --------------------------------- Intakes ------------------------------- */
+
+const shapeIntake = (r) => ({
+  slug: r.slug,
+  examDate: r.examDate || '',
+  applicationDeadline: r.applicationDeadline || '',
+  isPast: !!r.isPast,
+  season: triLang(r.season, r.seasonEn, r.seasonJa),
+  title: triLang(r.title, r.titleEn, r.titleJa),
+  tagline: triLang(r.tagline, r.taglineEn, r.taglineJa),
+  coePeriod: triLang(r.coePeriod, r.coePeriodEn, r.coePeriodJa),
+  visaWindow: triLang(r.visaWindow, r.visaWindowEn, r.visaWindowJa),
+  departureWindow: triLang(r.departureWindow, r.departureWindowEn, r.departureWindowJa),
+  highlights: Array.isArray(r.highlights) ? r.highlights : [],
+});
+
+exports.listIntakes = async (req, res) => {
+  try {
+    const rows = await Intake.findAll({
+      where: onlyPublished(req),
+      order: [['examDate', 'ASC'], ['sortOrder', 'ASC']],
+    });
+    res.json({ intakes: req.query.all === 'true' ? rows : rows.map(shapeIntake) });
+  } catch (err) {
+    console.error('listIntakes:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createIntake = async (req, res) => {
+  try {
+    if (!req.body.slug) return res.status(400).json({ error: 'Slug is required.' });
+    const intake = await Intake.create(req.body);
+    res.status(201).json({ message: 'Intake created', intake });
+  } catch (err) {
+    if (err.name === 'SequelizeUniqueConstraintError') return res.status(409).json({ error: 'slug already exists.' });
+    console.error('createIntake:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateIntake = async (req, res) => {
+  try {
+    const intake = await Intake.findByPk(req.params.id);
+    if (!intake) return res.status(404).json({ error: 'Intake not found' });
+    await intake.update(req.body || {});
+    res.json({ message: 'Intake updated', intake });
+  } catch (err) {
+    console.error('updateIntake:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteIntake = async (req, res) => {
+  try {
+    const deleted = await Intake.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'Intake not found' });
+    res.json({ message: 'Intake deleted' });
+  } catch (err) {
+    console.error('deleteIntake:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

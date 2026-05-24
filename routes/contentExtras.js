@@ -25,6 +25,7 @@ router.use(
     'quiz-tiers': { paths: ['/eligibility'] },
     'mock-tests': { paths: ['/jlpt-mock-test'] },
     'mock-questions': { paths: ['/jlpt-mock-test'] },
+    intakes: { paths: ['/intake'], detail: (b) => (b && b.intake && b.intake.slug ? `/intake/${b.intake.slug}` : null) },
   })
 );
 
@@ -87,5 +88,11 @@ router.get('/mock-questions', ...admin, c.listMockQuestions);
 router.post('/mock-questions', ...admin, c.createMockQuestion);
 router.put('/mock-questions/:id', ...admin, c.updateMockQuestion);
 router.delete('/mock-questions/:id', ...admin, c.deleteMockQuestion);
+
+// Intake landing pages (/intake, /intake/[slug])
+router.get('/intakes', c.listIntakes);
+router.post('/intakes', ...admin, c.createIntake);
+router.put('/intakes/:id', ...admin, c.updateIntake);
+router.delete('/intakes/:id', ...admin, c.deleteIntake);
 
 module.exports = router;
