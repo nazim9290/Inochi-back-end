@@ -52,6 +52,8 @@ const MockTest = require('./MockTest');
 const MockQuestion = require('./MockQuestion');
 const Intake = require('./Intake');
 const University = require('./University');
+const Scholarship = require('./Scholarship');
+const PreDepartureItem = require('./PreDepartureItem');
 
 // Associations
 User.hasMany(Blog, { foreignKey: 'authorId', as: 'blogs' });
@@ -148,4 +150,6 @@ module.exports = {
   MockQuestion,
   Intake,
   University,
+  Scholarship,
+  PreDepartureItem,
 };

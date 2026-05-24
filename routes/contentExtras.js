@@ -27,6 +27,8 @@ router.use(
     'mock-questions': { paths: ['/jlpt-mock-test'] },
     intakes: { paths: ['/intake'], detail: (b) => (b && b.intake && b.intake.slug ? `/intake/${b.intake.slug}` : null) },
     'partner-universities': { paths: ['/universities'], detail: (b) => (b && b.university && b.university.slug ? `/universities/${b.university.slug}` : null) },
+    scholarships: { paths: ['/scholarships'] },
+    'pre-departure': { paths: ['/pre-departure'] },
   })
 );
 
@@ -101,5 +103,17 @@ router.get('/partner-universities', c.listUniversities);
 router.post('/partner-universities', ...admin, c.createUniversity);
 router.put('/partner-universities/:id', ...admin, c.updateUniversity);
 router.delete('/partner-universities/:id', ...admin, c.deleteUniversity);
+
+// Scholarships (/scholarships)
+router.get('/scholarships', c.listScholarships);
+router.post('/scholarships', ...admin, c.createScholarship);
+router.put('/scholarships/:id', ...admin, c.updateScholarship);
+router.delete('/scholarships/:id', ...admin, c.deleteScholarship);
+
+// Pre-departure checklist (/pre-departure)
+router.get('/pre-departure', c.listPreDeparture);
+router.post('/pre-departure', ...admin, c.createPreDeparture);
+router.put('/pre-departure/:id', ...admin, c.updatePreDeparture);
+router.delete('/pre-departure/:id', ...admin, c.deletePreDeparture);
 
 module.exports = router;

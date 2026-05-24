@@ -24,6 +24,8 @@ const {
   MockQuestion,
   Intake,
   University,
+  Scholarship,
+  PreDepartureItem,
 } = require('../models');
 
 // EN: bn primary + en/ja fallbacks → the {en,bn,ja} object the pages read.
@@ -796,6 +798,133 @@ exports.deleteUniversity = async (req, res) => {
     res.json({ message: 'University deleted' });
   } catch (err) {
     console.error('deleteUniversity:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/* ------------------------------ Scholarships ----------------------------- */
+
+const shapeScholarship = (r) => ({
+  key: r.scholarshipKey,
+  name: triLang(r.name, r.nameEn, r.nameJa),
+  provider: r.provider || '',
+  amount: r.amount || '',
+  deadline: r.deadline || '',
+  link: r.link || '',
+  coverage: triLang(r.coverage, r.coverageEn, r.coverageJa),
+  eligibility: triLang(r.eligibility, r.eligibilityEn, r.eligibilityJa),
+  howToApply: triLang(r.howToApply, r.howToApplyEn, r.howToApplyJa),
+});
+
+exports.listScholarships = async (req, res) => {
+  try {
+    const rows = await Scholarship.findAll({ where: onlyPublished(req), order: [['sortOrder', 'ASC'], ['createdAt', 'ASC']] });
+    res.json({ scholarships: req.query.all === 'true' ? rows : rows.map(shapeScholarship) });
+  } catch (err) {
+    console.error('listScholarships:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createScholarship = async (req, res) => {
+  try {
+    if (!req.body.scholarshipKey) return res.status(400).json({ error: 'Key is required.' });
+    const scholarship = await Scholarship.create(req.body);
+    res.status(201).json({ message: 'Scholarship created', scholarship });
+  } catch (err) {
+    if (err.name === 'SequelizeUniqueConstraintError') return res.status(409).json({ error: 'key already exists.' });
+    console.error('createScholarship:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateScholarship = async (req, res) => {
+  try {
+    const scholarship = await Scholarship.findByPk(req.params.id);
+    if (!scholarship) return res.status(404).json({ error: 'Scholarship not found' });
+    await scholarship.update(req.body || {});
+    res.json({ message: 'Scholarship updated', scholarship });
+  } catch (err) {
+    console.error('updateScholarship:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteScholarship = async (req, res) => {
+  try {
+    const deleted = await Scholarship.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'Scholarship not found' });
+    res.json({ message: 'Scholarship deleted' });
+  } catch (err) {
+    console.error('deleteScholarship:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/* ---------------------------- Pre-departure ------------------------------ */
+
+exports.listPreDeparture = async (req, res) => {
+  try {
+    const rows = await PreDepartureItem.findAll({
+      where: onlyPublished(req),
+      order: [['groupOrder', 'ASC'], ['sortOrder', 'ASC'], ['createdAt', 'ASC']],
+    });
+    if (req.query.all === 'true') return res.json({ items: rows });
+    // EN: Group into {categories:[{key,label,items}]}. BN: category-তে group।
+    const map = new Map();
+    rows.forEach((r) => {
+      if (!map.has(r.categoryKey)) {
+        map.set(r.categoryKey, {
+          key: r.categoryKey,
+          groupOrder: r.groupOrder || 0,
+          label: triLang(r.categoryLabel, r.categoryLabelEn, r.categoryLabelJa),
+          items: [],
+        });
+      }
+      map.get(r.categoryKey).items.push({
+        id: r.id,
+        item: triLang(r.item, r.itemEn, r.itemJa),
+        note: triLang(r.note, r.noteEn, r.noteJa),
+      });
+    });
+    const categories = [...map.values()].sort((a, b) => a.groupOrder - b.groupOrder).map(({ groupOrder, ...c }) => c);
+    res.json({ categories });
+  } catch (err) {
+    console.error('listPreDeparture:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createPreDeparture = async (req, res) => {
+  try {
+    if (!req.body.categoryKey) return res.status(400).json({ error: 'Category key is required.' });
+    const item = await PreDepartureItem.create(req.body);
+    res.status(201).json({ message: 'Item created', item });
+  } catch (err) {
+    console.error('createPreDeparture:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updatePreDeparture = async (req, res) => {
+  try {
+    const item = await PreDepartureItem.findByPk(req.params.id);
+    if (!item) return res.status(404).json({ error: 'Item not found' });
+    await item.update(req.body || {});
+    res.json({ message: 'Item updated', item });
+  } catch (err) {
+    console.error('updatePreDeparture:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deletePreDeparture = async (req, res) => {
+  try {
+    const deleted = await PreDepartureItem.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'Item not found' });
+    res.json({ message: 'Item deleted' });
+  } catch (err) {
+    console.error('deletePreDeparture:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
