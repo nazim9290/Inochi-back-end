@@ -19,6 +19,8 @@ router.use(
     'university-rankings': { paths: ['/university-rankings'] },
     press: { paths: ['/press'] },
     community: { paths: ['/community'] },
+    'jlpt-sessions': { paths: ['/jlpt-calendar'] },
+    'visa-interview': { paths: ['/visa-interview'] },
   })
 );
 
@@ -47,5 +49,17 @@ router.get('/community', c.listCommunity);
 router.post('/community', ...admin, c.createCommunity);
 router.put('/community/:id', ...admin, c.updateCommunity);
 router.delete('/community/:id', ...admin, c.deleteCommunity);
+
+// JLPT exam sessions (/jlpt-calendar)
+router.get('/jlpt-sessions', c.listSessions);
+router.post('/jlpt-sessions', ...admin, c.createSession);
+router.put('/jlpt-sessions/:id', ...admin, c.updateSession);
+router.delete('/jlpt-sessions/:id', ...admin, c.deleteSession);
+
+// Visa interview prep (/visa-interview)
+router.get('/visa-interview', c.listVisaInterview);
+router.post('/visa-interview', ...admin, c.createVisaItem);
+router.put('/visa-interview/:id', ...admin, c.updateVisaItem);
+router.delete('/visa-interview/:id', ...admin, c.deleteVisaItem);
 
 module.exports = router;

@@ -16,6 +16,8 @@ const {
   UniversityRanking,
   PressMention,
   CommunityChannel,
+  JlptSession,
+  VisaInterviewItem,
 } = require('../models');
 
 // EN: bn primary + en/ja fallbacks → the {en,bn,ja} object the pages read.
@@ -263,6 +265,142 @@ exports.deleteCommunity = async (req, res) => {
     res.json({ message: 'Channel deleted' });
   } catch (err) {
     console.error('deleteCommunity:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/* ----------------------------- JLPT sessions ----------------------------- */
+
+const shapeSession = (r) => ({
+  session: r.session || '',
+  examDate: r.examDate || '',
+  registrationOpen: r.registrationOpen || '',
+  registrationClose: r.registrationClose || '',
+  title: triLang(r.title, r.titleEn, r.titleJa),
+  city: triLang(r.city, r.cityEn, r.cityJa),
+  levels: Array.isArray(r.levels) ? r.levels : [],
+  registrationUrl: r.registrationUrl || '',
+});
+
+exports.listSessions = async (req, res) => {
+  try {
+    const rows = await JlptSession.findAll({
+      where: onlyPublished(req),
+      order: [['examDate', 'ASC'], ['sortOrder', 'ASC']],
+    });
+    res.json({ exams: req.query.all === 'true' ? rows : rows.map(shapeSession) });
+  } catch (err) {
+    console.error('listSessions:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createSession = async (req, res) => {
+  try {
+    const session = await JlptSession.create(req.body);
+    res.status(201).json({ message: 'Session created', session });
+  } catch (err) {
+    console.error('createSession:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateSession = async (req, res) => {
+  try {
+    const session = await JlptSession.findByPk(req.params.id);
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+    await session.update(req.body || {});
+    res.json({ message: 'Session updated', session });
+  } catch (err) {
+    console.error('updateSession:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteSession = async (req, res) => {
+  try {
+    const deleted = await JlptSession.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'Session not found' });
+    res.json({ message: 'Session deleted' });
+  } catch (err) {
+    console.error('deleteSession:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/* --------------------------- Visa interview prep ------------------------- */
+
+// EN: Group rows by categoryKey into the nested {categories:[{questions}]}
+//     shape the page consumes. Label/intro come from the first row per group.
+// BN: row-গুলো categoryKey দিয়ে group করে page-এর nested
+//     {categories:[{questions}]} shape-এ। প্রতি group-এর label/intro প্রথম
+//     row থেকে।
+function groupVisaItems(rows) {
+  const map = new Map();
+  rows.forEach((r) => {
+    if (!map.has(r.categoryKey)) {
+      map.set(r.categoryKey, {
+        key: r.categoryKey,
+        groupOrder: r.groupOrder || 0,
+        label: triLang(r.categoryLabel, r.categoryLabelEn, r.categoryLabelJa),
+        intro: triLang(r.categoryIntro, r.categoryIntroEn, r.categoryIntroJa),
+        questions: [],
+      });
+    }
+    map.get(r.categoryKey).questions.push({
+      id: r.id,
+      question: triLang(r.question, r.questionEn, r.questionJa),
+      tip: triLang(r.tip, r.tipEn, r.tipJa),
+      modelAnswer: triLang(r.modelAnswer, r.modelAnswerEn, r.modelAnswerJa),
+      redFlag: triLang(r.redFlag, r.redFlagEn, r.redFlagJa),
+    });
+  });
+  return [...map.values()].sort((a, b) => a.groupOrder - b.groupOrder).map(({ groupOrder, ...c }) => c);
+}
+
+exports.listVisaInterview = async (req, res) => {
+  try {
+    const rows = await VisaInterviewItem.findAll({
+      where: onlyPublished(req),
+      order: [['groupOrder', 'ASC'], ['sortOrder', 'ASC'], ['createdAt', 'ASC']],
+    });
+    res.json({ categories: req.query.all === 'true' ? rows : groupVisaItems(rows) });
+  } catch (err) {
+    console.error('listVisaInterview:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.createVisaItem = async (req, res) => {
+  try {
+    if (!req.body.categoryKey) return res.status(400).json({ error: 'Category key is required.' });
+    const item = await VisaInterviewItem.create(req.body);
+    res.status(201).json({ message: 'Item created', item });
+  } catch (err) {
+    console.error('createVisaItem:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateVisaItem = async (req, res) => {
+  try {
+    const item = await VisaInterviewItem.findByPk(req.params.id);
+    if (!item) return res.status(404).json({ error: 'Item not found' });
+    await item.update(req.body || {});
+    res.json({ message: 'Item updated', item });
+  } catch (err) {
+    console.error('updateVisaItem:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteVisaItem = async (req, res) => {
+  try {
+    const deleted = await VisaInterviewItem.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ error: 'Item not found' });
+    res.json({ message: 'Item deleted' });
+  } catch (err) {
+    console.error('deleteVisaItem:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
