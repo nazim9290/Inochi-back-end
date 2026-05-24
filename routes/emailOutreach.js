@@ -25,6 +25,10 @@ router.post('/email-groups', ...admin, c.createGroup);
 router.put('/email-groups/:id', ...admin, c.updateGroup);
 router.delete('/email-groups/:id', ...admin, c.deleteGroup);
 
+// Import from existing in-system lists (subscribers / contact-form leads)
+router.get('/email-outreach/import-preview', ...admin, c.importPreview);
+router.post('/email-outreach/import', ...admin, c.importFromSource);
+
 // Composer — status, test, send, history
 router.get('/email-outreach/status', ...admin, c.status);
 router.post('/email-outreach/test', ...admin, c.sendTest);

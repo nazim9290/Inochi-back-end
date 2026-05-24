@@ -23,7 +23,7 @@
  */
 
 const { Op } = require('sequelize');
-const { SchoolContact, EmailGroup, EmailLog } = require('../models');
+const { SchoolContact, EmailGroup, EmailLog, Subscriber, Contact } = require('../models');
 const mailer = require('../helpers/mailer');
 
 const REPLY_TO = process.env.MAIL_REPLY_TO || 'inochiedu@gmail.com';
@@ -410,4 +410,87 @@ exports.listLogs = async (req, res) => {
 //     ঠিকানা দেখায়।
 exports.status = async (req, res) => {
   res.json({ smtpReady: mailer.smtpReady(), replyTo: REPLY_TO, maxRecipients: MAX_RECIPIENTS });
+};
+
+/* ----------------------- Import from existing lists ---------------------- */
+
+// EN: Gather importable rows from an in-system source. Subscribers → only
+//     CONFIRMED (double-opt-in) ones, mapped with the email as the school
+//     label (no name on file). Contacts (contact-form leads) → mapped with
+//     their name. Returns de-duped rows + a count of how many are NOT already
+//     in the directory.
+// BN: সিস্টেমের একটা source থেকে import-যোগ্য row সংগ্রহ। Subscriber → শুধু
+//     CONFIRMED (double-opt-in), email-কে school label হিসেবে (নাম নেই)।
+//     Contact (contact-form lead) → নাম সহ। directory-তে নেই এমন কতগুলো,
+//     তার count সহ de-duped row ফেরত।
+async function gatherSource(source, group) {
+  const rows = [];
+  if (source === 'subscribers') {
+    const subs = await Subscriber.findAll();
+    subs.forEach((s) => {
+      if (!s.confirmedAt) return; // only opted-in
+      const email = norm(s.email);
+      if (!isEmail(email)) return;
+      rows.push({ email, schoolName: email, contactName: '', groups: group ? [group] : [] });
+    });
+  } else if (source === 'contacts') {
+    const cs = await Contact.findAll();
+    cs.forEach((c) => {
+      const email = norm(c.email);
+      if (!isEmail(email)) return;
+      rows.push({ email, schoolName: c.name || email, contactName: c.name || '', groups: group ? [group] : [] });
+    });
+  } else {
+    return null;
+  }
+  return rows;
+}
+
+// EN: Preview how many NEW emails each in-system source could add.
+// BN: প্রতিটি in-system source থেকে কতগুলো নতুন email যোগ করা যাবে তার preview।
+exports.importPreview = async (req, res) => {
+  try {
+    const existing = new Set((await SchoolContact.findAll({ attributes: ['email'] })).map((c) => norm(c.email)));
+    const countNew = (rows) => {
+      const seen = new Set();
+      rows.forEach((r) => {
+        if (!existing.has(r.email) && !seen.has(r.email)) seen.add(r.email);
+      });
+      return seen.size;
+    };
+    const subs = await gatherSource('subscribers', '');
+    const contacts = await gatherSource('contacts', '');
+    res.json({ subscribers: countNew(subs), contacts: countNew(contacts) });
+  } catch (err) {
+    console.error('importPreview:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// EN: Import a source's emails into the directory. Skips addresses already
+//     present + duplicates within the source. Optional group assignment.
+// BN: একটা source-এর email directory-তে import। আগে থেকে থাকা ঠিকানা +
+//     source-এর ভিতরের duplicate skip। Optional group assignment।
+exports.importFromSource = async (req, res) => {
+  try {
+    const { source, group } = req.body;
+    const rows = await gatherSource(source, group || '');
+    if (rows === null) return res.status(400).json({ error: 'Unknown source. Use "subscribers" or "contacts".' });
+    if (rows.length === 0) return res.json({ message: 'Nothing to import', created: 0, skipped: 0, total: 0 });
+
+    const existing = new Set((await SchoolContact.findAll({ attributes: ['email'] })).map((c) => norm(c.email)));
+    const seen = new Set();
+    const toCreate = [];
+    let skipped = 0;
+    rows.forEach((r) => {
+      if (existing.has(r.email) || seen.has(r.email)) { skipped += 1; return; }
+      seen.add(r.email);
+      toCreate.push({ ...r, active: true });
+    });
+    const created = toCreate.length ? await SchoolContact.bulkCreate(toCreate) : [];
+    res.status(201).json({ message: 'Import complete', created: created.length, skipped, total: rows.length });
+  } catch (err) {
+    console.error('importFromSource:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 };
