@@ -55,6 +55,8 @@ const University = require('./University');
 const Scholarship = require('./Scholarship');
 const PreDepartureItem = require('./PreDepartureItem');
 const LoginAttempt = require('./LoginAttempt');
+const BlogTopicQueue = require('./BlogTopicQueue');
+const AiBlogRun = require('./AiBlogRun');
 
 // Associations
 User.hasMany(Blog, { foreignKey: 'authorId', as: 'blogs' });
@@ -154,4 +156,6 @@ module.exports = {
   Scholarship,
   PreDepartureItem,
   LoginAttempt,
+  BlogTopicQueue,
+  AiBlogRun,
 };

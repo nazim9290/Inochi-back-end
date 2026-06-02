@@ -123,6 +123,7 @@ app.use('/api', require('./routes/auditLog'));
 app.use('/api', require('./routes/blogReactionRoute'));
 app.use('/api', require('./routes/blogCommentRoute'));
 app.use('/api', require('./routes/meRoute'));
+app.use('/api', require('./routes/aiBlog'));
 
 // Image upload (kept inline because it's a single endpoint pair)
 // EN: requireAuth here — image upload was previously open to anonymous
@@ -206,6 +207,16 @@ app.use((err, req, res, _next) => {
     app.listen(port, () => {
       console.log(`Server is running on http://localhost:${port}`);
     });
+
+    // EN: Boot the daily AI blog scheduler. No-op when AI_BLOG_ENABLED!='true'
+    //     so the feature ships dormant until the admin flips the env var.
+    // BN: Daily AI blog scheduler boot। AI_BLOG_ENABLED!='true' হলে কিছু
+    //     করে না — env flip না করা পর্যন্ত feature dormant ship করে।
+    try {
+      require('./helpers/blogScheduler').startScheduler();
+    } catch (e) {
+      console.error('[ai-blog] scheduler boot failed:', e?.message || e);
+    }
   } catch (err) {
     console.error('Startup failed:', err);
     process.exit(1);
