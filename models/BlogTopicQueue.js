@@ -39,7 +39,13 @@ const BlogTopicQueue = sequelize.define(
   {
     tableName: 'blog_topic_queue',
     timestamps: true,
-    indexes: [{ fields: ['status', 'createdAt'] }],
+    // EN: Index column refs use snake_case (actual DB column names) because
+    //     project-wide `underscored: true` maps JS createdAt → created_at.
+    //     Using camelCase here breaks sync({alter}) on alter passes.
+    // BN: Index column ref snake_case (actual DB column) — project-wide
+    //     `underscored: true`-এ createdAt → created_at। camelCase দিলে
+    //     sync({alter}) break হয়।
+    indexes: [{ fields: ['status', 'created_at'] }],
   }
 );
 

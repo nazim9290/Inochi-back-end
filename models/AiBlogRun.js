@@ -29,7 +29,9 @@ const AiBlogRun = sequelize.define(
   {
     tableName: 'ai_blog_runs',
     timestamps: true,
-    indexes: [{ fields: ['createdAt'] }],
+    // EN: snake_case for index col refs (see BlogTopicQueue note).
+    // BN: index col ref snake_case (BlogTopicQueue-এর note দেখুন)।
+    indexes: [{ fields: ['created_at'] }],
   }
 );
 
