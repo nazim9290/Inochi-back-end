@@ -152,15 +152,21 @@ function isValid(doc) {
   return true;
 }
 
-function makeSlug(title) {
-  // EN: slugify with `strict: true` so we drop everything except [a-z0-9-]
-  //     and lowercase. Limit to 80 chars to fit common DB constraints +
-  //     keep URLs scannable.
-  // BN: `strict: true`-এ slugify — [a-z0-9-] ছাড়া বাকি drop, lowercase।
-  //     80 char-এ limit — DB constraint + URL scannable রাখে।
-  const base = slugify(String(title || '').slice(0, 120), { lower: true, strict: true, trim: true });
-  if (!base) return `post-${Date.now()}`;
-  return base.slice(0, 80);
+function makeSlug(...titleCandidates) {
+  // EN: Slugify with `strict: true` (only [a-z0-9-], lowercase). Bangla /
+  //     Japanese characters get stripped to nothing, so we try the English
+  //     title first when available, then fall back to others. Last resort
+  //     is a timestamped placeholder so we never insert an empty slug.
+  // BN: `strict: true`-এ slugify (শুধু [a-z0-9-], lowercase)। Bangla /
+  //     Japanese character সব strip হয়, তাই English title আগে try করি,
+  //     না থাকলে অন্য candidate। সবগুলো খালি হলে timestamped placeholder —
+  //     empty slug কখনো insert হয় না।
+  for (const t of titleCandidates) {
+    if (!t || typeof t !== 'string') continue;
+    const base = slugify(t.slice(0, 120), { lower: true, strict: true, trim: true });
+    if (base) return base.slice(0, 80);
+  }
+  return `post-${Date.now()}`;
 }
 
 async function callDeepSeek({ topic, category, keywordsCsv }) {

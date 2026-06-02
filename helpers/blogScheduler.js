@@ -67,7 +67,11 @@ async function resolveAuthorId() {
 //     constrain করে; এটা undefined/null leakage আটকায় ও field-এর length
 //     cap enforce করে — DB column limit কখনো ভাঙবে না।
 function shape(doc, source, topic) {
-  const slug = makeSlug(doc.title);
+  // EN: Prefer English title for the slug (ASCII-clean), fall back to Ja
+  //     (romaji-stripped becomes empty anyway), then Bangla title.
+  // BN: Slug-এর জন্য English title আগে (ASCII-clean), না থাকলে Ja
+  //     (romaji-strip-এ খালি হয়), শেষে Bangla title।
+  const slug = makeSlug(doc.titleEn, doc.titleJa, doc.title);
   const safeTags =
     typeof doc.tags === 'object' && doc.tags
       ? {
