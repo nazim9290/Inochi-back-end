@@ -141,6 +141,19 @@ exports.getAllStudents = async (req, res) => {
 
 exports.upDateProfile = async (req, res) => {
   try {
+    // EN: Ownership / admin gate — caller may only edit their own profile
+    //     unless they are admin. Without this any logged-in user could
+    //     overwrite anyone else's record by passing a different :id.
+    // BN: Ownership / admin gate — caller শুধু নিজের profile edit করতে
+    //     পারবে (admin ছাড়া)। এটা না থাকলে যেকোনো logged-in user অন্য
+    //     কারো :id দিয়ে তার profile overwrite করতে পারত।
+    const callerId = String(req.user?.id || '');
+    const targetId = String(req.params.id || '');
+    const isAdmin = req.user?.role === 'admin';
+    if (!isAdmin && callerId !== targetId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
     const user = await User.findByPk(req.params.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
 

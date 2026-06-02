@@ -1,8 +1,31 @@
 const { Contact } = require('../models');
 const mailer = require('../helpers/mailer');
 
+// EN: Cap stored message body so bots can't pump huge payloads through the
+//     form (DB bloat + mail provider rejections downstream).
+// BN: stored message body cap — bot বিশাল payload pump করতে না পারে
+//     (DB bloat + mail provider reject)।
+const MAX_MSG_LEN = 4000;
+const MAX_NAME_LEN = 200;
+
 exports.contact = async (req, res) => {
-  const { name, email, phone, msg } = req.body;
+  // EN: Honeypot — bots fill every visible input. `website` is hidden from
+  //     real users via CSS; if it has any value, silently accept and drop.
+  // BN: Honeypot — bot সব visible input fill করে। `website` CSS দিয়ে real
+  //     user-এর কাছে hidden; value থাকলে নীরবে accept করে discard।
+  if (req.body && req.body.website) {
+    return res.status(201).json({ message: 'Your message sent successfully' });
+  }
+
+  const name = String(req.body?.name || '').trim().slice(0, MAX_NAME_LEN);
+  const email = String(req.body?.email || '').trim().toLowerCase().slice(0, 200);
+  const phone = String(req.body?.phone || '').trim().slice(0, 50);
+  const msg = String(req.body?.msg || '').trim().slice(0, MAX_MSG_LEN);
+
+  if (!name || !msg) {
+    return res.status(422).json({ error: 'Name and message are required' });
+  }
+
   try {
     await Contact.create({ name, email, phone, msg });
     // Fire-and-forget — never let mail failures block the form submit.

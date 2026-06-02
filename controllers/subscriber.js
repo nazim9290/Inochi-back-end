@@ -22,10 +22,27 @@ const newToken = () => crypto.randomBytes(24).toString('base64url');
 //       ২) Pending confirm → নতুন token দিয়ে আবার confirm email পাঠাই
 //          (visitor যেন ভাবে ঘটেছে কিছু — UX success)।
 //       ৩) একদম নতুন → insert + confirm email।
+// EN: Server-side email regex — extra layer on top of Sequelize's isEmail.
+//     Reject obvious garbage early so confirm-mail isn't wasted.
+// BN: Sequelize-এর isEmail-এর উপরে server-side regex — সুস্পষ্ট আবর্জনা
+//     আগেই reject করি যাতে confirm-mail নষ্ট না হয়।
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 exports.subscriber = async (req, res) => {
+  // EN: Honeypot field — `website` should never be filled by a human. If it
+  //     is, silently 200 so bots don't realise they were caught.
+  // BN: Honeypot field — `website` কখনো human fill করে না। Filled থাকলে
+  //     নীরবে 200 ফেরাই যাতে bot বুঝতে না পারে।
+  if (req.body && req.body.website) {
+    return res.status(202).json({ message: 'Confirmation email sent.', pending: true });
+  }
+
   const { email } = req.body;
   const normalized = String(email || '').trim().toLowerCase();
   if (!normalized) return res.status(422).json({ error: 'Email is required' });
+  if (!EMAIL_RE.test(normalized)) {
+    return res.status(422).json({ error: 'Invalid email format' });
+  }
 
   try {
     const existing = await Subscriber.findOne({ where: { email: normalized } });
