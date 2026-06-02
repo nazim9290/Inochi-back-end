@@ -1,9 +1,29 @@
 const jwt = require('jsonwebtoken');
 const cloudinary = require('cloudinary').v2;
 
-const { User, SeminerBooking, StudentDetails, sequelize } = require('../models');
+const { User, SeminerBooking, StudentDetails, LoginAttempt, sequelize } = require('../models');
 const mailer = require('../helpers/mailer');
 const { hashPassword, comparePassword } = require('../helpers/auth');
+
+// EN: Lockout policy — 5 wrong passwords inside the window puts the email on
+//     a 15-minute timeout. Success resets the row, so honest users with the
+//     occasional typo never notice.
+// BN: Lockout policy — window-এর মধ্যে 5টা ভুল password হলে email-টা
+//     15 মিনিট timeout-এ। সফল login row reset করে; মাঝে মধ্যে typo করা
+//     legitimate user-এ কোনো প্রভাব পড়ে না।
+const MAX_FAILS = 5;
+const FAIL_WINDOW_MS = 15 * 60 * 1000;
+const LOCK_DURATION_MS = 15 * 60 * 1000;
+
+// EN: Password complexity rule — 8+ chars and at least one digit. Tighter
+//     than the old `length >= 6` and resists most dictionary lists.
+// BN: Password complexity — 8+ char এবং অন্তত একটা digit। পুরোনো
+//     `length >= 6`-এর চেয়ে কড়া; বেশিরভাগ dictionary list resist করে।
+function passwordWeakReason(pw) {
+  if (!pw || pw.length < 8) return 'Password must be at least 8 characters';
+  if (!/\d/.test(pw)) return 'Password must contain at least one digit';
+  return null;
+}
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -14,9 +34,8 @@ cloudinary.config({
 exports.register = async (req, res) => {
   const { name, email, password, phone } = req.body;
   if (!name) return res.json({ error: 'Name is required' });
-  if (!password || password.length < 6) {
-    return res.json({ error: 'Password is required and should be 6 characters long' });
-  }
+  const weak = passwordWeakReason(password);
+  if (weak) return res.json({ error: weak });
   if (!phone) return res.json({ error: 'Phone is required' });
 
   try {
@@ -60,11 +79,39 @@ exports.BookSeminer = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ where: { email } });
-    if (!user) return res.json({ error: 'no user found' });
+    const normalized = String(email || '').trim().toLowerCase();
+    if (!normalized || !password) {
+      return res.json({ error: 'Email and password required' });
+    }
+
+    // EN: Lockout gate — runs BEFORE the DB user lookup so a locked email
+    //     can't be probed for "user exists vs not" by timing the response.
+    // BN: Lockout gate — DB user lookup-এর আগে চলে যাতে locked email-এ
+    //     response time দেখে "user আছে কিনা" probe করা না যায়।
+    const attempt = await LoginAttempt.findOne({ where: { email: normalized } });
+    if (attempt && attempt.lockedUntil && attempt.lockedUntil > new Date()) {
+      const waitMin = Math.ceil((attempt.lockedUntil - new Date()) / 60000);
+      return res.status(429).json({
+        error: `Too many failed attempts. Try again in ${waitMin} minute(s).`,
+      });
+    }
+
+    const user = await User.findOne({ where: { email: normalized } });
+    // EN: Generic message for both "user not found" and "wrong password" so
+    //     an attacker can't enumerate valid emails through the login form.
+    // BN: "user নেই" + "wrong password" — দু'টোর জন্য একই generic message
+    //     যাতে attacker login form দিয়ে valid email enumerate করতে না পারে।
+    const fail = async () => {
+      await recordLoginFailure(normalized);
+      return res.json({ error: 'Invalid email or password' });
+    };
+    if (!user) return fail();
 
     const match = await comparePassword(password, user.password);
-    if (!match) return res.json({ error: 'Wrong password' });
+    if (!match) return fail();
+
+    // Reset attempt counter on success.
+    if (attempt) await attempt.destroy();
 
     const token = jwt.sign({ _id: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
     const userData = user.toJSON();
@@ -75,6 +122,29 @@ exports.login = async (req, res) => {
     return res.status(400).send('Error. Try again.');
   }
 };
+
+// EN: Upsert the failure counter; lock when it exceeds MAX_FAILS within the
+//     window. Window is reset on long gaps so honest users with one mistake
+//     a day don't accumulate toward a lockout.
+// BN: Failure counter upsert; window-এর মধ্যে MAX_FAILS অতিক্রম করলে lock।
+//     Long gap-এ window reset — যে user দিনে একবার ভুল করে তাকে lockout
+//     accumulate করে না।
+async function recordLoginFailure(email) {
+  const now = new Date();
+  let row = await LoginAttempt.findOne({ where: { email } });
+  if (!row) {
+    return LoginAttempt.create({ email, failures: 1, lastAttempt: now });
+  }
+  const stale = now - new Date(row.lastAttempt) > FAIL_WINDOW_MS;
+  const nextFailures = stale ? 1 : row.failures + 1;
+  row.failures = nextFailures;
+  row.lastAttempt = now;
+  if (nextFailures >= MAX_FAILS) {
+    row.lockedUntil = new Date(now.getTime() + LOCK_DURATION_MS);
+    row.failures = 0;
+  }
+  return row.save();
+}
 
 exports.currentUser = async (req, res) => {
   try {

@@ -160,6 +160,31 @@ exports.sendNewsletter = async (req, res) => {
   }
 };
 
+// EN: Purge unconfirmed subscribers older than N days. The double opt-in
+//     flow inserts a pending row; if the visitor never clicks the confirm
+//     link the row sits in the DB forever. Admin can sweep them out so the
+//     list reflects real, mailable subscribers only.
+// BN: N দিনের চেয়ে পুরোনো unconfirmed subscriber purge। Double opt-in
+//     flow pending row insert করে; visitor confirm-link click না করলে row
+//     অসীম কাল bসে থাকে। Admin sweep করে real, mailable subscriber রাখে।
+exports.cleanupUnconfirmed = async (req, res) => {
+  try {
+    const days = Number(req.query.days || req.body?.days || 30);
+    const cutoff = new Date(Date.now() - Math.max(1, days) * 24 * 60 * 60 * 1000);
+    const { Op } = require('sequelize');
+    const deleted = await Subscriber.destroy({
+      where: {
+        confirmedAt: null,
+        createdAt: { [Op.lt]: cutoff },
+      },
+    });
+    return res.status(200).json({ deleted, days });
+  } catch (err) {
+    console.error('cleanupUnconfirmed error:', err);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 // EN: Delete a subscriber. Used by admin to remove bounced / unsubscribed
 //     emails. Idempotent — 404 when nothing matched so the UI knows.
 // BN: Subscriber delete — bounced / unsubscribed email admin সরাতে পারে।

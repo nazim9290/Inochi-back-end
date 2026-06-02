@@ -174,10 +174,23 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Not found' });
 });
 
-// Error handler
+// EN: Error handler — in production we never echo the raw err.message back
+//     to the client (it can leak file paths, ORM internals, stack-trace
+//     fragments). We always log the real error server-side. In dev we keep
+//     the verbose message so debugging stays fast.
+// BN: Error handler — production-এ raw err.message client-কে কখনো ফেরাই
+//     না (file path / ORM internals / stack-trace leak করে)। Server-এ
+//     আসল error log করি। Dev-এ verbose message রাখি যাতে debug সহজ থাকে।
+const IS_PROD = process.env.NODE_ENV === 'production';
 app.use((err, req, res, _next) => {
-  console.error(err);
-  res.status(err.status || 500).json({ message: err.message || 'Internal Server Error' });
+  console.error('[error]', req.method, req.originalUrl, '-', err.message || err);
+  const status = err.status || 500;
+  const message = IS_PROD
+    ? status >= 500
+      ? 'Internal Server Error'
+      : err.message || 'Bad request'
+    : err.message || 'Internal Server Error';
+  res.status(status).json({ message });
 });
 
 (async () => {
