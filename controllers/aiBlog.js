@@ -102,6 +102,7 @@ exports.status = async (req, res) => {
   res.json({
     enabled: process.env.AI_BLOG_ENABLED === 'true',
     hasApiKey: !!process.env.DEEPSEEK_API_KEY,
+    hasUnsplashKey: !!process.env.UNSPLASH_ACCESS_KEY,
     model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
     hour: parseInt(process.env.AI_BLOG_HOUR, 10) || 9,
     authorIdConfigured: !!process.env.AI_BLOG_AUTHOR_ID,

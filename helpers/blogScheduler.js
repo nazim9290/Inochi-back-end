@@ -25,6 +25,7 @@ const cron = require('node-cron');
 const { Op } = require('sequelize');
 const { Blog, BlogTopicQueue, AiBlogRun, User } = require('../models');
 const { callDeepSeek, pickFallbackTopic, makeSlug } = require('./aiBlog');
+const { fetchUnsplashPhoto } = require('./blogImage');
 const { pingPaths } = require('./indexnow');
 
 const PUBLIC_BASE = (process.env.PUBLIC_SITE_URL || 'https://inochieducation.com').replace(/\/$/, '');
@@ -66,7 +67,7 @@ async function resolveAuthorId() {
 // BN: Insert-এর আগে AI output sanitise + slim। Generator আগেই shape
 //     constrain করে; এটা undefined/null leakage আটকায় ও field-এর length
 //     cap enforce করে — DB column limit কখনো ভাঙবে না।
-function shape(doc, source, topic) {
+function shape(doc, source, topic, image) {
   // EN: Prefer English title for the slug (ASCII-clean), fall back to Ja
   //     (romaji-stripped becomes empty anyway), then Bangla title.
   // BN: Slug-এর জন্য English title আগে (ASCII-clean), না থাকলে Ja
@@ -98,6 +99,11 @@ function shape(doc, source, topic) {
     tags: safeTags,
     status: 'published',
     aiGeneratedAt: new Date(),
+    // EN: Cover image already fetched + shaped by the caller; null if
+    //     Unsplash failed or the env key is missing.
+    // BN: Cover image caller আগেই fetch + shape করেছে; Unsplash fail বা
+    //     env key না থাকলে null।
+    image: image || null,
   };
 }
 
@@ -173,7 +179,25 @@ async function runOnce({ source = 'auto' } = {}) {
     return { ok: false, error: err, runRow };
   }
 
-  const blogData = { ...shape(ai.doc, usedSource, topic), authorId };
+  // EN: Cover image — fetch from Unsplash using the AI-suggested query.
+  //     Failure is silent (image stays null), so the post still publishes.
+  // BN: Cover image — AI-suggested query দিয়ে Unsplash থেকে fetch।
+  //     Failure silent (image null থাকে), post তাও publish হয়।
+  let imageMeta = null;
+  try {
+    const imgRes = await fetchUnsplashPhoto(ai.doc.imageQuery || topic);
+    if (imgRes.ok) {
+      imageMeta = imgRes.photo;
+    } else if (process.env.UNSPLASH_ACCESS_KEY) {
+      // EN: Only log when key IS set — missing-key path is expected silence.
+      // BN: শুধু key থাকলে log — key নেই হলে silence expected।
+      console.log('[ai-blog] image fetch skipped:', imgRes.error);
+    }
+  } catch (e) {
+    console.log('[ai-blog] image fetch threw:', e?.message || e);
+  }
+
+  const blogData = { ...shape(ai.doc, usedSource, topic, imageMeta), authorId };
 
   try {
     const blog = await Blog.create(blogData);

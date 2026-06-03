@@ -109,6 +109,15 @@ function buildUserPrompt({ topic, category, keywordsCsv }) {
         categoryEn: 'English category label (1–3 words)',
         categoryJa: 'Japanese category label (1–3 words)',
         metaKeywords: 'comma,separated,long-tail,seo,keywords',
+        // EN: 2–4 short English keywords for the cover image search — concrete
+        //     visuals (people / places / objects) that match the post's mood.
+        //     Avoid abstract words ("knowledge", "future"). Example: "tokyo
+        //     train station students", "kanji study desk", "japan visa stamp".
+        // BN: cover image search-এর জন্য ২-৪টা সংক্ষিপ্ত English keyword —
+        //     post-এর mood-এর সাথে মিল রেখে concrete visual (মানুষ / স্থান /
+        //     বস্তু)। abstract শব্দ avoid। Example: "tokyo train station
+        //     students", "kanji study desk", "japan visa stamp"।
+        imageQuery: 'tokyo students study',
         tags: { blogs: true, study: false, service: false },
       },
       null,
