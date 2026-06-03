@@ -25,7 +25,7 @@ const cron = require('node-cron');
 const { Op } = require('sequelize');
 const { Blog, BlogTopicQueue, AiBlogRun, User } = require('../models');
 const { callDeepSeek, pickFallbackTopic, makeSlug } = require('./aiBlog');
-const { fetchUnsplashPhoto } = require('./blogImage');
+const { generateCoverImage } = require('./blogImage');
 const { pingPaths } = require('./indexnow');
 
 const PUBLIC_BASE = (process.env.PUBLIC_SITE_URL || 'https://inochieducation.com').replace(/\/$/, '');
@@ -179,22 +179,23 @@ async function runOnce({ source = 'auto' } = {}) {
     return { ok: false, error: err, runRow };
   }
 
-  // EN: Cover image — fetch from Unsplash using the AI-suggested query.
-  //     Failure is silent (image stays null), so the post still publishes.
-  // BN: Cover image — AI-suggested query দিয়ে Unsplash থেকে fetch।
-  //     Failure silent (image null থাকে), post তাও publish হয়।
+  // EN: AI cover image — Pollinations (Flux) generation + Cloudinary host.
+  //     Seeded on the AI image query so the same brief reproduces the same
+  //     image on retry. Failure silent: post still publishes with image=null.
+  // BN: AI cover image — Pollinations (Flux) generate + Cloudinary host।
+  //     AI image query-তে seed — একই brief retry-তে একই image। Failure
+  //     silent: post image=null দিয়েই publish হয়।
   let imageMeta = null;
   try {
-    const imgRes = await fetchUnsplashPhoto(ai.doc.imageQuery || topic);
+    const imgRes = await generateCoverImage(ai.doc.imageQuery || topic, ai.doc.imageQuery || topic);
     if (imgRes.ok) {
       imageMeta = imgRes.photo;
-    } else if (process.env.UNSPLASH_ACCESS_KEY) {
-      // EN: Only log when key IS set — missing-key path is expected silence.
-      // BN: শুধু key থাকলে log — key নেই হলে silence expected।
-      console.log('[ai-blog] image fetch skipped:', imgRes.error);
+      console.log('[ai-blog] cover image generated:', imageMeta.url);
+    } else {
+      console.log('[ai-blog] cover image skipped:', imgRes.error);
     }
   } catch (e) {
-    console.log('[ai-blog] image fetch threw:', e?.message || e);
+    console.log('[ai-blog] cover image threw:', e?.message || e);
   }
 
   const blogData = { ...shape(ai.doc, usedSource, topic, imageMeta), authorId };

@@ -1,130 +1,175 @@
 /**
- * EN: Cover-image fetcher for AI-generated blog posts. Calls the Unsplash
- *     Search Photos endpoint with a short English keyword query, picks
- *     the first landscape result, and returns a {url, public_id, alt,
- *     credit} object that matches the legacy Blog.image JSONB shape.
+ * EN: AI cover-image generator for blog posts. Uses Pollinations.ai's free
+ *     Flux endpoint (no API key required) to render a 1200x630 landscape
+ *     image from an English prompt, then uploads the result to Cloudinary
+ *     so we own the asset (Pollinations is a public service we shouldn't
+ *     hot-link long-term). Saved shape matches the legacy
+ *     {url, public_id, alt, credit} that the frontend already renders.
  *
- *     Returns null on:
- *       - Missing UNSPLASH_ACCESS_KEY (feature disabled silently)
- *       - Network / API failure
- *       - Zero results for the query
- *     The caller writes a blog post with image=null in those cases — the
- *     frontend already renders the post fine without a cover.
+ *     Failure modes are all silent — caller writes the blog post with
+ *     image=null and the frontend renders fine without a cover.
+ * BN: Blog post-এর AI cover-image generator। Pollinations.ai-র free Flux
+ *     endpoint (কোনো API key লাগে না) দিয়ে English prompt থেকে 1200x630
+ *     landscape image render, তারপর Cloudinary-তে upload — আমরা asset
+ *     own করি (Pollinations public service, দীর্ঘমেয়াদে hot-link করা
+ *     ঠিক না)। Saved shape legacy {url, public_id, alt, credit}-এর সাথে
+ *     মিল — frontend আগের মতই render করে।
  *
- *     Unsplash API ToS REQUIRES that we ping the photo's `download_location`
- *     endpoint whenever we use it; this fires fire-and-forget after the
- *     URL is selected.
- * BN: AI-generated blog post-এর cover-image fetcher। Unsplash Search Photos
- *     endpoint-এ সংক্ষিপ্ত English keyword query করে, প্রথম landscape
- *     result বেছে নিয়ে legacy Blog.image JSONB shape-এর সাথে মিল রেখে
- *     {url, public_id, alt, credit} object return করে।
- *
- *     null return করে যদি:
- *       - UNSPLASH_ACCESS_KEY না থাকে (feature নীরবে disabled)
- *       - Network / API failure
- *       - Query-তে কোনো result না পাওয়া
- *     ঐ ক্ষেত্রে caller image=null দিয়ে blog post লেখে — frontend cover
- *     ছাড়াই post ঠিকঠাক render করে।
- *
- *     Unsplash API ToS-অনুযায়ী আমরা photo-র `download_location` endpoint
- *     fire করতে বাধ্য — URL select হওয়ার পর fire-and-forget।
+ *     যেকোনো failure-এ silent — caller image=null দিয়ে blog লেখে,
+ *     frontend cover ছাড়াই ঠিকঠাক render করে।
  */
 
-const UNSPLASH_SEARCH = 'https://api.unsplash.com/search/photos';
-const UTM_PARAMS = 'utm_source=inochi_education&utm_medium=referral';
+const crypto = require('crypto');
+const cloudinary = require('cloudinary').v2;
 
-// EN: Sanitise the query — strip newlines/quotes, cap length, lowercase.
-//     Bad queries produce empty results; defensive trimming is cheaper
-//     than re-running the whole AI generation.
-// BN: query sanitise — newline/quote remove, length cap, lowercase। খারাপ
-//     query empty result দেয়; পুরো AI generation re-run-এর চেয়ে
-//     defensive trim সস্তা।
-function cleanQuery(raw) {
-  return String(raw || '')
-    .replace(/["\n\r]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 120)
-    .toLowerCase();
+// EN: Module-level Cloudinary config — env vars are read at first import,
+//     same pattern as controllers/userAuth.js so we don't double-configure.
+// BN: Module-level Cloudinary config — env var প্রথম import-এ পড়া হয়,
+//     controllers/userAuth.js-এর মতই pattern, double-configure এড়ায়।
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const POLLINATIONS_BASE = 'https://image.pollinations.ai/prompt';
+
+// EN: Build a richer image prompt out of the AI's short keyword hint by
+//     padding with style + composition guidance that suits a blog hero.
+//     Photographic + brand-safe (no people in compromising poses, no
+//     copyrighted logos), warm lighting, editorial style.
+// BN: AI-র সংক্ষিপ্ত keyword hint-এর সাথে style + composition guidance
+//     যোগ করে richer image prompt তৈরি। Blog hero-র উপযোগী — photographic,
+//     brand-safe, warm lighting, editorial style।
+function enrichPrompt(rawQuery) {
+  const q = String(rawQuery || 'students studying Japanese in Tokyo').trim().slice(0, 200);
+  return [
+    q,
+    'editorial photograph, natural lighting, warm tones, sharp focus',
+    'no text, no watermark, no logos',
+    'wide cinematic composition',
+  ].join(', ');
 }
 
-// EN: Build photographer attribution required by Unsplash API guidelines.
-//     `link` opens the photographer's Unsplash profile with our UTM tag so
-//     they can see clicks from us in their analytics (good citizenship +
-//     keeps our API access in good standing).
-// BN: Unsplash API guideline অনুযায়ী photographer attribution। `link`
-//     আমাদের UTM tag-সহ photographer-এর Unsplash profile খোলে — তারা
-//     analytics-এ আমাদের traffic দেখে (ভাল practice + API access
-//     good standing-এ রাখে)।
-function shapePhoto(p) {
-  if (!p || !p.urls) return null;
-  // EN: `regular` is 1080px wide JPG — enough for our 1200x630 hero crop
-  //     and ~150KB so blog list pages stay snappy.
-  // BN: `regular` 1080px wide JPG — আমাদের 1200x630 hero crop-এর জন্য
-  //     যথেষ্ট ও ~150KB, blog list page snappy থাকে।
-  const url = p.urls.regular || p.urls.full || p.urls.small;
-  if (!url) return null;
-  const user = p.user || {};
-  const username = user.username || 'unsplash';
-  return {
-    url,
-    public_id: `unsplash-${p.id}`,
-    alt: p.alt_description || p.description || '',
-    credit: {
-      name: user.name || 'Unsplash contributor',
-      link: `https://unsplash.com/@${username}?${UTM_PARAMS}`,
-      source: 'Unsplash',
-      sourceLink: `https://unsplash.com/?${UTM_PARAMS}`,
-    },
-    // EN: Kept for the required download tracking ping; not displayed.
-    // BN: Required download tracking ping-এর জন্য রাখা; দেখানো হয় না।
-    _downloadLocation: p.links?.download_location || null,
-  };
+// EN: Pollinations URL — public Flux endpoint. `seed` makes the output
+//     deterministic for the same prompt+seed combo so re-runs reproduce.
+//     `nologo=true` strips the small Pollinations badge.
+// BN: Pollinations URL — public Flux endpoint। `seed` একই prompt+seed-এ
+//     deterministic output দেয়, re-run-এ একই image। `nologo=true`
+//     ছোট Pollinations badge সরায়।
+function buildPollinationsUrl(prompt, seed) {
+  const params = new URLSearchParams({
+    width: '1200',
+    height: '630',
+    seed: String(seed),
+    nologo: 'true',
+    model: 'flux',
+  });
+  return `${POLLINATIONS_BASE}/${encodeURIComponent(prompt)}?${params}`;
 }
 
-async function fetchUnsplashPhoto(query) {
-  const key = process.env.UNSPLASH_ACCESS_KEY;
-  if (!key) return { ok: false, error: 'UNSPLASH_ACCESS_KEY missing', photo: null };
-
-  const q = cleanQuery(query);
-  if (!q) return { ok: false, error: 'empty query', photo: null };
-
+// EN: Pull image bytes from Pollinations. Generation can take 10-25 s
+//     server-side; allow up to 90 s before aborting so a slow gen doesn't
+//     block the whole scheduler run.
+// BN: Pollinations থেকে image bytes pull। Server-side generation 10-25s
+//     লাগতে পারে; abort-এর আগে 90s allow — slow gen পুরো scheduler
+//     block না করুক।
+async function fetchImageBuffer(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 90 * 1000);
   try {
-    const url = `${UNSPLASH_SEARCH}?per_page=5&orientation=landscape&content_filter=high&query=${encodeURIComponent(q)}`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 15000);
-    const res = await fetch(url, {
-      headers: {
-        'Accept-Version': 'v1',
-        Authorization: `Client-ID ${key}`,
-      },
-      signal: controller.signal,
-    });
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const arrayBuf = await res.arrayBuffer();
+    return Buffer.from(arrayBuf);
+  } finally {
     clearTimeout(timer);
-    if (!res.ok) {
-      const txt = await res.text().catch(() => '');
-      return { ok: false, error: `Unsplash ${res.status}: ${txt.slice(0, 200)}`, photo: null };
-    }
-    const data = await res.json();
-    const first = Array.isArray(data?.results) ? data.results[0] : null;
-    const photo = shapePhoto(first);
-    if (!photo) return { ok: false, error: `no results for "${q}"`, photo: null };
-
-    // EN: Required by Unsplash ToS — track that we used this photo.
-    //     Fire-and-forget; failure does not affect post publish.
-    // BN: Unsplash ToS-অনুযায়ী এটা required — আমরা photo ব্যবহার করেছি
-    //     সেটা track করতে হবে। Fire-and-forget; failure publish আটকায় না।
-    if (photo._downloadLocation) {
-      fetch(photo._downloadLocation, {
-        headers: { Authorization: `Client-ID ${key}` },
-      }).catch(() => {});
-    }
-    delete photo._downloadLocation;
-
-    return { ok: true, photo, error: null };
-  } catch (err) {
-    return { ok: false, error: `Unsplash request failed: ${err.message || err}`, photo: null };
   }
 }
 
-module.exports = { fetchUnsplashPhoto, cleanQuery };
+// EN: Upload buffer to Cloudinary via the upload_stream API. Pinned under
+//     a dedicated `inochi/ai-blog` folder so admins can audit / clear AI
+//     assets independently of human-uploaded images.
+// BN: Buffer Cloudinary-তে upload — upload_stream API। `inochi/ai-blog`
+//     folder-এ pin — admin AI asset আলাদাভাবে audit / clear করতে পারে।
+function uploadToCloudinary(buffer, publicId) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'inochi/ai-blog',
+        public_id: publicId,
+        resource_type: 'image',
+        format: 'jpg',
+        overwrite: true,
+      },
+      (err, result) => {
+        if (err) return reject(err);
+        if (!result?.secure_url) return reject(new Error('Cloudinary returned no url'));
+        resolve(result);
+      }
+    );
+    stream.end(buffer);
+  });
+}
+
+/**
+ * EN: Generate + upload a cover image. Returns {ok, photo, error}.
+ *     `photo` shape: {url, public_id, alt, credit{name, source, sourceLink}}.
+ * BN: Cover image generate + upload। Return {ok, photo, error}।
+ *     `photo` shape: {url, public_id, alt, credit{name, source, sourceLink}}।
+ */
+async function generateCoverImage(rawQuery, seedSource) {
+  // EN: Cloudinary keys are required to host the result; if any is missing
+  //     bail out early so we don't burn a Pollinations generation just to
+  //     fail at upload time.
+  // BN: Result host করতে Cloudinary key required; কোনোটি missing থাকলে
+  //     আগেই bail out — Pollinations generation burn করে upload-এ fail
+  //     করার কোনো মানে নেই।
+  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    return { ok: false, photo: null, error: 'Cloudinary credentials missing' };
+  }
+
+  const enriched = enrichPrompt(rawQuery);
+  // EN: Stable seed from the prompt — same brief, same image. Avoids the
+  //     auto-pilot accidentally producing identical hero images on
+  //     consecutive days when the AI gives the same imageQuery twice.
+  // BN: Prompt থেকে stable seed — একই brief, একই image। AI পরপর দু'দিন
+  //     একই imageQuery দিলে accidentally একই hero image যাতে না আসে।
+  const seed = parseInt(crypto.createHash('sha256').update(String(seedSource || enriched)).digest('hex').slice(0, 8), 16);
+  const polUrl = buildPollinationsUrl(enriched, seed);
+
+  let buffer;
+  try {
+    buffer = await fetchImageBuffer(polUrl);
+  } catch (err) {
+    return { ok: false, photo: null, error: `Pollinations fetch failed: ${err.message || err}` };
+  }
+  if (!buffer || buffer.length < 1000) {
+    return { ok: false, photo: null, error: 'Pollinations returned empty/tiny image' };
+  }
+
+  const publicId = `${Date.now()}-${seed.toString(36)}`;
+  let uploaded;
+  try {
+    uploaded = await uploadToCloudinary(buffer, publicId);
+  } catch (err) {
+    return { ok: false, photo: null, error: `Cloudinary upload failed: ${err.message || err}` };
+  }
+
+  return {
+    ok: true,
+    error: null,
+    photo: {
+      url: uploaded.secure_url,
+      public_id: uploaded.public_id,
+      alt: String(rawQuery || '').slice(0, 200),
+      credit: {
+        name: 'AI generated (Flux)',
+        source: 'Pollinations.ai',
+        sourceLink: 'https://pollinations.ai',
+      },
+    },
+  };
+}
+
+module.exports = { generateCoverImage, enrichPrompt };
