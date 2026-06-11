@@ -109,7 +109,7 @@ exports.status = async (req, res) => {
       process.env.CLOUDINARY_API_KEY &&
       process.env.CLOUDINARY_API_SECRET
     ),
-    imageProvider: 'Pollinations (Flux) → Cloudinary',
+    imageProvider: 'Wikimedia Commons → Cloudinary',
     model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
     perDay,
     hours,
