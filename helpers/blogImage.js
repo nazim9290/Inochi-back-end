@@ -57,26 +57,26 @@ function enrichPrompt(rawQuery) {
 // BN: Pollinations URL — public Flux endpoint। `seed` একই prompt+seed-এ
 //     deterministic output দেয়, re-run-এ একই image। `nologo=true`
 //     ছোট Pollinations badge সরায়।
-function buildPollinationsUrl(prompt, seed) {
+function buildPollinationsUrl(prompt, seed, model = 'flux') {
   const params = new URLSearchParams({
     width: '1200',
     height: '630',
     seed: String(seed),
     nologo: 'true',
-    model: 'flux',
+    model,
   });
   return `${POLLINATIONS_BASE}/${encodeURIComponent(prompt)}?${params}`;
 }
 
 // EN: Pull image bytes from Pollinations. Generation can take 10-25 s
-//     server-side; allow up to 90 s before aborting so a slow gen doesn't
-//     block the whole scheduler run.
+//     server-side; default 60 s abort so a slow gen doesn't block the whole
+//     scheduler run (we retry across a few attempts, so per-attempt is short).
 // BN: Pollinations থেকে image bytes pull। Server-side generation 10-25s
-//     লাগতে পারে; abort-এর আগে 90s allow — slow gen পুরো scheduler
-//     block না করুক।
-async function fetchImageBuffer(url) {
+//     লাগতে পারে; default 60s abort — slow gen যাতে পুরো scheduler block না
+//     করে (কয়েকবার retry করি বলে per-attempt ছোট রাখি)।
+async function fetchImageBuffer(url, timeoutMs = 60 * 1000) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 90 * 1000);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -136,16 +136,37 @@ async function generateCoverImage(rawQuery, seedSource) {
   // BN: Prompt থেকে stable seed — একই brief, একই image। AI পরপর দু'দিন
   //     একই imageQuery দিলে accidentally একই hero image যাতে না আসে।
   const seed = parseInt(crypto.createHash('sha256').update(String(seedSource || enriched)).digest('hex').slice(0, 8), 16);
-  const polUrl = buildPollinationsUrl(enriched, seed);
 
-  let buffer;
-  try {
-    buffer = await fetchImageBuffer(polUrl);
-  } catch (err) {
-    return { ok: false, photo: null, error: `Pollinations fetch failed: ${err.message || err}` };
+  // EN: Pollinations' free tier is flaky — it can 5xx, time out, or return a
+  //     tiny HTML error page. A silent failure is exactly why recent posts
+  //     shipped with no cover image. Retry across a couple of seeds and fall
+  //     back to the faster `turbo` model before giving up.
+  // BN: Pollinations-এর free tier অস্থির — 5xx, timeout, বা ছোট HTML error
+  //     page দিতে পারে। এই silent failure-এর জন্যই সাম্প্রতিক পোস্টে cover
+  //     image আসেনি। হাল ছাড়ার আগে কয়েকটি seed-এ retry + দ্রুততর `turbo`
+  //     model-এ fall back করি।
+  const attempts = [
+    { model: 'flux', seed },
+    { model: 'flux', seed: (seed + 101) >>> 0 },
+    { model: 'turbo', seed },
+  ];
+  let buffer = null;
+  let lastError = 'unknown';
+  for (const attempt of attempts) {
+    const polUrl = buildPollinationsUrl(enriched, attempt.seed, attempt.model);
+    try {
+      const buf = await fetchImageBuffer(polUrl);
+      if (buf && buf.length >= 1000) {
+        buffer = buf;
+        break;
+      }
+      lastError = 'Pollinations returned empty/tiny image';
+    } catch (err) {
+      lastError = `Pollinations fetch failed (${attempt.model}): ${err.message || err}`;
+    }
   }
-  if (!buffer || buffer.length < 1000) {
-    return { ok: false, photo: null, error: 'Pollinations returned empty/tiny image' };
+  if (!buffer) {
+    return { ok: false, photo: null, error: lastError };
   }
 
   const publicId = `${Date.now()}-${seed.toString(36)}`;

@@ -6,7 +6,7 @@
  */
 
 const { BlogTopicQueue, AiBlogRun, Blog } = require('../models');
-const { runOnce } = require('../helpers/blogScheduler');
+const { runOnce, getPerDay, getPublishHours } = require('../helpers/blogScheduler');
 
 exports.listQueue = async (req, res) => {
   try {
@@ -99,6 +99,8 @@ exports.triggerManual = async (req, res) => {
 };
 
 exports.status = async (req, res) => {
+  const perDay = getPerDay();
+  const hours = getPublishHours(perDay);
   res.json({
     enabled: process.env.AI_BLOG_ENABLED === 'true',
     hasApiKey: !!process.env.DEEPSEEK_API_KEY,
@@ -109,7 +111,11 @@ exports.status = async (req, res) => {
     ),
     imageProvider: 'Pollinations (Flux) → Cloudinary',
     model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
-    hour: parseInt(process.env.AI_BLOG_HOUR, 10) || 9,
+    perDay,
+    hours,
+    // EN: `hour` kept for backward compatibility with older admin builds.
+    // BN: পুরোনো admin build-এর সাথে backward compatibility-র জন্য `hour` রাখা।
+    hour: hours[0],
     authorIdConfigured: !!process.env.AI_BLOG_AUTHOR_ID,
   });
 };

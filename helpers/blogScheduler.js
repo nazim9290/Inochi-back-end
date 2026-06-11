@@ -112,7 +112,7 @@ function shape(doc, source, topic, image) {
 //     is complete even when nothing was published.
 // BN: একক end-to-end run। Returns {ok, blog, runRow, error}। নির্বিশেষে
 //     AiBlogRun row persist — কিছু publish না হলেও audit log complete থাকে।
-async function runOnce({ source = 'auto' } = {}) {
+async function runOnce({ source = 'auto', slotIndex = 0 } = {}) {
   const startedAt = Date.now();
 
   // EN: Decide topic — admin queue first, then AI fallback.
@@ -121,29 +121,34 @@ async function runOnce({ source = 'auto' } = {}) {
   let topic = '';
   let category = '';
   let keywordsCsv = '';
+  let theme = '';
 
-  if (source !== 'manual' || true) {
-    // EN: Even for manual triggers, prefer to drain the admin queue first.
-    // BN: Manual trigger-ও admin queue আগে drain করে।
-    queueRow = await BlogTopicQueue.findOne({
-      where: { status: 'pending' },
-      order: [['createdAt', 'ASC']],
-    });
-  }
+  // EN: Even for manual triggers, prefer to drain the admin queue first.
+  // BN: Manual trigger-ও admin queue আগে drain করে।
+  queueRow = await BlogTopicQueue.findOne({
+    where: { status: 'pending' },
+    order: [['createdAt', 'ASC']],
+  });
 
   if (queueRow) {
     topic = queueRow.topic;
     category = queueRow.category || '';
     keywordsCsv = queueRow.keywordsCsv || '';
   } else {
-    const fb = pickFallbackTopic();
+    // EN: Fall back to a rotating themed topic, but skip anything we've used
+    //     in the recent run history so the auto-pilot never repeats itself.
+    // BN: rotating themed topic-এ fall back, তবে সাম্প্রতিক run history-তে
+    //     ব্যবহৃত যেকোনো topic বাদ — auto-pilot যেন কখনো নিজের পুনরাবৃত্তি না করে।
+    const avoid = await recentTopics(20).catch(() => []);
+    const fb = pickFallbackTopic(slotIndex, avoid);
     topic = fb.topic;
     category = fb.category;
+    theme = fb.theme;
   }
 
   const usedSource = queueRow ? 'queue' : source;
 
-  const ai = await callDeepSeek({ topic, category, keywordsCsv });
+  const ai = await callDeepSeek({ topic, category, keywordsCsv, theme });
   if (!ai.ok) {
     if (queueRow) {
       // EN: Don't burn the topic on a transient AI failure — leave it
@@ -234,18 +239,67 @@ async function runOnce({ source = 'auto' } = {}) {
   }
 }
 
-// EN: Guard against double-firing the same day if the process restarts
-//     across the cron hour. We check today's AiBlogRun success count before
-//     firing — if >= 1 success exists for today, skip silently.
-// BN: একই দিনে process restart হলে cron দু'বার fire হওয়া আটকাই। Fire-এর
-//     আগে আজকের AiBlogRun success count check; ≥1 থাকলে silent skip।
-async function hasSuccessfulRunToday() {
+// EN: Return the topic briefs of the most recent runs (any status) so the
+//     fallback picker can skip anything used lately. Looking at runs (not
+//     just published Blogs) means a failed attempt on a topic still counts
+//     as "recently tried" and we move on to a fresh angle.
+// BN: সাম্প্রতিক run-গুলোর (যেকোনো status) topic brief ফেরত — fallback picker
+//     যাতে সম্প্রতি ব্যবহৃত topic এড়াতে পারে। Blog নয়, run দেখা মানে কোনো
+//     topic-এ fail হলেও সেটা "সম্প্রতি চেষ্টা করা" ধরে পরের fresh angle-এ যাই।
+async function recentTopics(limit = 20) {
+  const rows = await AiBlogRun.findAll({
+    attributes: ['topic'],
+    order: [['createdAt', 'DESC']],
+    limit,
+  });
+  return rows.map((r) => r.topic).filter(Boolean);
+}
+
+// EN: How many posts to auto-publish per day. AI_BLOG_PER_DAY, default 2,
+//     clamped to a sane 1–6.
+// BN: দিনে কয়টি পোস্ট auto-publish হবে। AI_BLOG_PER_DAY, default 2, 1–6-এ clamp।
+function getPerDay() {
+  const n = parseInt(process.env.AI_BLOG_PER_DAY, 10);
+  return Math.max(1, Math.min(6, Number.isFinite(n) ? n : 2));
+}
+
+// EN: Local hours (0–23) at which to fire each daily run. AI_BLOG_HOURS
+//     (comma list, e.g. "9,18") wins; otherwise spread `perDay` slots evenly
+//     starting at AI_BLOG_HOUR (default 9). Always sorted + de-duplicated.
+//     Each run still fires at HH:17 to avoid :00 clustering across deploys.
+// BN: প্রতিটি daily run কোন কোন local hour-এ (0–23) চলবে। AI_BLOG_HOURS
+//     (comma list, যেমন "9,18") আগে; না থাকলে AI_BLOG_HOUR (default 9) থেকে
+//     শুরু করে `perDay` slot সমানভাবে ছড়িয়ে দিই। সবসময় sorted + unique।
+//     প্রতিটি run HH:17-এ চলে — deploy জুড়ে :00 clustering এড়াতে।
+function getPublishHours(perDay = getPerDay()) {
+  const raw = String(process.env.AI_BLOG_HOURS || '').trim();
+  let hours = [];
+  if (raw) {
+    hours = raw
+      .split(',')
+      .map((s) => parseInt(s.trim(), 10))
+      .filter((h) => Number.isInteger(h) && h >= 0 && h <= 23);
+  }
+  if (!hours.length) {
+    const base = Math.max(0, Math.min(23, parseInt(process.env.AI_BLOG_HOUR, 10) || 9));
+    const step = Math.max(1, Math.floor(24 / perDay));
+    for (let i = 0; i < perDay; i++) hours.push((base + i * step) % 24);
+  }
+  return [...new Set(hours)].sort((a, b) => a - b);
+}
+
+// EN: Count today's SUCCESSFUL runs. Used both to (a) cap the day at perDay
+//     posts even if the process restarts across a cron hour, and (b) derive
+//     the slot index so each run of the day uses a different theme.
+// BN: আজকের SUCCESSFUL run গুনি। ব্যবহার: (ক) process restart হলেও দিনে
+//     perDay-র বেশি পোস্ট না হওয়া, (খ) slot index বের করা যাতে দিনের প্রতিটি
+//     run আলাদা theme পায়।
+async function successfulRunsToday() {
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
-  const count = await AiBlogRun.count({
+  return AiBlogRun.count({
     where: { status: 'success', createdAt: { [Op.gte]: startOfDay } },
   });
-  return count >= 1;
 }
 
 function startScheduler() {
@@ -253,26 +307,41 @@ function startScheduler() {
     console.log('[ai-blog] disabled (AI_BLOG_ENABLED != true)');
     return;
   }
-  const hour = Math.max(0, Math.min(23, parseInt(process.env.AI_BLOG_HOUR, 10) || 9));
-  // EN: Use a deterministic off-minute (17) so multiple sites running this
-  //     same library don't all hit DeepSeek at :00. node-cron uses local time.
-  // BN: Deterministic off-minute (17) — একই library চালানো একাধিক site
-  //     একসাথে :00-এ DeepSeek hit না করুক। node-cron local time ব্যবহার করে।
-  const expr = `17 ${hour} * * *`;
-  cron.schedule(expr, async () => {
-    try {
-      if (await hasSuccessfulRunToday()) {
-        console.log('[ai-blog] today already has a successful run — skipping');
-        return;
+  const perDay = getPerDay();
+  const hours = getPublishHours(perDay);
+  // EN: One cron per configured hour. Each fire checks today's success count:
+  //     skip if we've already hit perDay, otherwise generate the next slot.
+  //     The slot index (= today's success count) drives theme rotation so the
+  //     day's posts span different themes.
+  // BN: প্রতিটি configured hour-এ একটি cron। প্রতিবার আজকের success count
+  //     দেখে: perDay হয়ে গেলে skip, নাহলে পরের slot generate। slot index
+  //     (= আজকের success count) theme rotation চালায় — দিনের পোস্টগুলো ভিন্ন
+  //     theme-এ পড়ে।
+  hours.forEach((hour) => {
+    const expr = `17 ${hour} * * *`;
+    cron.schedule(expr, async () => {
+      try {
+        const done = await successfulRunsToday();
+        if (done >= perDay) {
+          console.log(`[ai-blog] today already has ${done}/${perDay} successful runs — skipping`);
+          return;
+        }
+        console.log(`[ai-blog] run starting (slot ${done + 1}/${perDay})`);
+        const r = await runOnce({ source: 'auto', slotIndex: done });
+        console.log(`[ai-blog] run: ok=${r.ok} blogId=${r.blog?.id || '-'} err=${r.error || '-'}`);
+      } catch (err) {
+        console.error('[ai-blog] run threw:', err);
       }
-      console.log('[ai-blog] daily run starting');
-      const r = await runOnce({ source: 'auto' });
-      console.log(`[ai-blog] daily run: ok=${r.ok} blogId=${r.blog?.id || '-'} err=${r.error || '-'}`);
-    } catch (err) {
-      console.error('[ai-blog] daily run threw:', err);
-    }
+    });
   });
-  console.log(`[ai-blog] scheduled daily at ${hour}:17 local`);
+  console.log(`[ai-blog] scheduled ${perDay}/day at ${hours.map((h) => `${h}:17`).join(', ')} local`);
 }
 
-module.exports = { startScheduler, runOnce, hasSuccessfulRunToday };
+module.exports = {
+  startScheduler,
+  runOnce,
+  successfulRunsToday,
+  recentTopics,
+  getPerDay,
+  getPublishHours,
+};
