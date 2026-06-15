@@ -124,6 +124,7 @@ app.use('/api', require('./routes/blogReactionRoute'));
 app.use('/api', require('./routes/blogCommentRoute'));
 app.use('/api', require('./routes/meRoute'));
 app.use('/api', require('./routes/aiBlog'));
+app.use('/api', require('./routes/fbLeadgen'));
 
 // Image upload (kept inline because it's a single endpoint pair)
 // EN: requireAuth here — image upload was previously open to anonymous
