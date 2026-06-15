@@ -53,7 +53,11 @@ app.use(helmet());
 //     Caps slow-loris / large-payload DoS attempts.
 // BN: 1MB JSON cap — image upload multer handle করে, তাই legit JSON ছোট।
 //     Slow-loris / large-payload DoS-এর চেষ্টা আটকে।
-app.use(express.json({ limit: '1mb' }));
+// EN: `verify` stashes the raw body buffer so webhook routes (e.g. Facebook
+//     Lead Ads) can validate HMAC signatures. No effect on normal parsing.
+// BN: `verify` raw body buffer রেখে দেয় — webhook route (যেমন Facebook Lead Ads)
+//     HMAC signature যাচাই করতে পারে। সাধারণ parsing-এ কোনো প্রভাব নেই।
+app.use(express.json({ limit: '1mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(
   Fingerprint({

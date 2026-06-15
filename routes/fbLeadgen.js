@@ -20,10 +20,31 @@
 //     access token (ব্লগ auto-post-এর একই token)।
 
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 const { Contact } = require('../models');
 const { fetchAndMapLead } = require('../helpers/facebookLeadAds');
 const mailer = require('../helpers/mailer');
+
+// EN: Verify Meta's X-Hub-Signature-256 (HMAC-SHA256 of the raw body with the
+//     App Secret). Enforced when FB_APP_SECRET is set — set it to fully lock the
+//     endpoint. If unset we skip (the verify-token handshake gates subscription,
+//     leadgen_id is strictly numeric, and forged ids fail the Graph fetch, so a
+//     spoofed POST can't inject data). Constant-time compare; length-guarded.
+// BN: Meta-র X-Hub-Signature-256 (raw body-র HMAC-SHA256, App Secret দিয়ে) যাচাই।
+//     FB_APP_SECRET সেট থাকলে enforce — endpoint পুরোপুরি lock করতে এটা সেট করুন।
+//     না থাকলে skip (verify-token handshake subscription আটকায়, leadgen_id কঠোর
+//     numeric, জাল id Graph fetch-এ fail করে — তাই spoofed POST ডেটা inject পারে না)।
+function verifySignature(req) {
+  const secret = process.env.FB_APP_SECRET || '';
+  if (!secret) return true; // not configured → graceful skip
+  const sig = req.get('X-Hub-Signature-256') || '';
+  if (!sig || !req.rawBody) return false;
+  const expected = 'sha256=' + crypto.createHmac('sha256', secret).update(req.rawBody).digest('hex');
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
 
 // EN: Verify handshake — Meta sends hub.mode/hub.verify_token/hub.challenge.
 //     Echo the challenge only when the token matches our configured secret.
@@ -47,6 +68,9 @@ router.get('/fb-leadgen', (req, res) => {
 //     leadgen change best-effort process। জাল POST ক্ষতিকর নয়: ভুল leadgen_id-তে
 //     Graph fetch fail করে, কিছুই store হয় না।
 router.post('/fb-leadgen', async (req, res) => {
+  // EN: Reject spoofed payloads before doing any work (when App Secret is set).
+  // BN: কোনো কাজের আগেই spoofed payload reject (App Secret সেট থাকলে)।
+  if (!verifySignature(req)) return res.sendStatus(403);
   res.sendStatus(200);
   try {
     const entries = Array.isArray(req.body?.entry) ? req.body.entry : [];

@@ -26,12 +26,27 @@ function pick(fieldData, ...names) {
 }
 
 exports.fetchAndMapLead = async (leadgenId) => {
+  // EN: leadgen_id is attacker-controllable (it arrives in the webhook POST).
+  //     Reject anything that isn't a plain numeric id so it can't inject extra
+  //     path segments / query params into the Graph URL (SSRF / path injection).
+  // BN: leadgen_id attacker-controllable (webhook POST-এ আসে)। numeric ছাড়া কিছু
+  //     reject করি যাতে Graph URL-এ বাড়তি path/query inject করা না যায় (SSRF)।
+  if (!/^[0-9]{1,32}$/.test(String(leadgenId || ''))) {
+    return { ok: false, reason: 'bad-leadgen-id' };
+  }
+
   const s = await SiteSettings.findOne();
   const token = s?.fbPageAccessToken;
   if (!token) return { ok: false, reason: 'fb-not-configured (no Page access token in Site Settings)' };
 
   try {
-    const res = await fetch(`${GRAPH_BASE}/${leadgenId}?access_token=${encodeURIComponent(token)}`);
+    // EN: Token in the Authorization header (not the query string) so it never
+    //     lands in proxy / access logs.
+    // BN: token Authorization header-এ (query string-এ নয়) — proxy/access log-এ
+    //     যাতে না যায়।
+    const res = await fetch(`${GRAPH_BASE}/${leadgenId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     const data = await res.json();
     if (!res.ok) return { ok: false, reason: data.error?.message || 'graph-error' };
 
