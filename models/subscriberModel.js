@@ -24,6 +24,10 @@ const Subscriber = sequelize.define(
     // BN: One-time confirmation token। ব্যবহারের পর clear — link পুনরায়
     //     ব্যবহারযোগ্য না। দ্রুত lookup-এর জন্য index।
     confirmToken: { type: DataTypes.STRING, allowNull: true },
+    // EN: Lead-source attribution (where this subscriber came from).
+    // BN: Lead-source attribution (এই subscriber কোথা থেকে এল)।
+    source: { type: DataTypes.STRING(120), defaultValue: '' },
+    attribution: { type: DataTypes.TEXT, defaultValue: '' },
   },
   {
     tableName: 'subscribers',

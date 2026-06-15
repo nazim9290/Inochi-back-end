@@ -21,13 +21,17 @@ exports.contact = async (req, res) => {
   const email = String(req.body?.email || '').trim().toLowerCase().slice(0, 200);
   const phone = String(req.body?.phone || '').trim().slice(0, 50);
   const msg = String(req.body?.msg || '').trim().slice(0, MAX_MSG_LEN);
+  // EN: Lead-source attribution from the frontend (lib/attribution.js).
+  // BN: frontend (lib/attribution.js) থেকে lead-source attribution।
+  const source = String(req.body?.source || '').trim().slice(0, 120);
+  const attribution = String(req.body?.attribution || '').trim().slice(0, 600);
 
   if (!name || !msg) {
     return res.status(422).json({ error: 'Name and message are required' });
   }
 
   try {
-    await Contact.create({ name, email, phone, msg });
+    await Contact.create({ name, email, phone, msg, source, attribution });
     // Fire-and-forget — never let mail failures block the form submit.
     mailer.notifyContact({ name, email, phone, msg }).catch((e) => console.error('notifyContact:', e));
     if (email) mailer.thankContact({ name, email }).catch((e) => console.error('thankContact:', e));

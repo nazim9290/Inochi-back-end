@@ -59,6 +59,15 @@ const Application = sequelize.define(
     notes: { type: DataTypes.TEXT, defaultValue: '' },
     adminNotes: { type: DataTypes.TEXT, defaultValue: '' },
 
+    // EN: Lead-source attribution — `source` is a short label (e.g. "Facebook/
+    //     Instagram Ad"), `attribution` the raw UTM/referrer breadcrumb. Set by
+    //     the frontend (lib/attribution.js) so admin sees where leads came from.
+    // BN: Lead-source attribution — `source` সংক্ষিপ্ত label (যেমন "Facebook/
+    //     Instagram Ad"), `attribution` raw UTM/referrer breadcrumb। frontend
+    //     (lib/attribution.js) সেট করে — admin দেখে lead কোথা থেকে এল।
+    source: { type: DataTypes.STRING(120), defaultValue: '' },
+    attribution: { type: DataTypes.TEXT, defaultValue: '' },
+
     // EN: Pipeline status. Defaults to "new" — admin moves through stages.
     //     Validated by app code (not DB enum) so we can add states without
     //     migration.

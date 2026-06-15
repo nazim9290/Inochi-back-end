@@ -63,9 +63,15 @@ exports.register = async (req, res) => {
 };
 
 exports.BookSeminer = async (req, res) => {
-  const { name, email, phone, date, time, seminar } = req.body;
+  const { name, email, phone, date, time, seminar, source, attribution } = req.body;
   try {
-    await SeminerBooking.create({ name, phone, email });
+    await SeminerBooking.create({
+      name,
+      phone,
+      email,
+      source: String(source || '').slice(0, 120),
+      attribution: String(attribution || '').slice(0, 600),
+    });
     mailer
       .notifyBooking({ name, email, phone, date, time, seminar })
       .catch((e) => console.error('notifyBooking:', e));

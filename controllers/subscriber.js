@@ -43,6 +43,10 @@ exports.subscriber = async (req, res) => {
   if (!EMAIL_RE.test(normalized)) {
     return res.status(422).json({ error: 'Invalid email format' });
   }
+  // EN: Lead-source attribution from the frontend (lib/attribution.js).
+  // BN: frontend (lib/attribution.js) থেকে lead-source attribution।
+  const source = String(req.body?.source || '').trim().slice(0, 120);
+  const attribution = String(req.body?.attribution || '').trim().slice(0, 600);
 
   try {
     const existing = await Subscriber.findOne({ where: { email: normalized } });
@@ -57,7 +61,7 @@ exports.subscriber = async (req, res) => {
       existing.confirmToken = token;
       await existing.save();
     } else {
-      row = await Subscriber.create({ email: normalized, confirmToken: token, confirmedAt: null });
+      row = await Subscriber.create({ email: normalized, confirmToken: token, confirmedAt: null, source, attribution });
     }
 
     const confirmUrl = `${SITE_URL}/newsletter/confirm/${token}`;

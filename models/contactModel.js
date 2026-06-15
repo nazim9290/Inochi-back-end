@@ -10,6 +10,10 @@ const Contact = sequelize.define(
     phone: { type: DataTypes.STRING },
     msg: { type: DataTypes.TEXT, allowNull: false },
     status: { type: DataTypes.STRING, defaultValue: 'Pending' },
+    // EN: Lead-source attribution (where this lead came from — FB ad, organic…).
+    // BN: Lead-source attribution (এই lead কোথা থেকে এল — FB ad, organic…)।
+    source: { type: DataTypes.STRING(120), defaultValue: '' },
+    attribution: { type: DataTypes.TEXT, defaultValue: '' },
   },
   {
     tableName: 'contacts',

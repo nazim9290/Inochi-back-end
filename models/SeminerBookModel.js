@@ -8,6 +8,10 @@ const SeminerBooking = sequelize.define(
     name: { type: DataTypes.STRING, allowNull: false },
     email: { type: DataTypes.STRING, allowNull: false },
     phone: { type: DataTypes.STRING, allowNull: false },
+    // EN: Lead-source attribution (where this booking came from — FB ad, etc.).
+    // BN: Lead-source attribution (এই booking কোথা থেকে এল — FB ad ইত্যাদি)।
+    source: { type: DataTypes.STRING(120), defaultValue: '' },
+    attribution: { type: DataTypes.TEXT, defaultValue: '' },
   },
   {
     tableName: 'seminer_bookings',
