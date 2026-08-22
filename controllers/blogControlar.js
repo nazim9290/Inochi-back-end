@@ -5,7 +5,10 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://inochieducation.co
 
 // Strip HTML, collapse whitespace, cap to N chars — used for FB post summaries.
 const summarise = (html, n = 240) => {
-  const text = String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const text = String(html || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (text.length <= n) return text;
   return text.slice(0, n).replace(/\s+\S*$/, '') + '…';
 };
@@ -54,7 +57,8 @@ exports.updateBlog = async (req, res) => {
   try {
     const blog = await Blog.findByPk(req.params.id);
     if (!blog) return res.status(404).json({ error: 'Blog not found' });
-    const { title, titleEn, content, contentEn, image, category, categoryEn, status, tags } = req.body;
+    const { title, titleEn, content, contentEn, image, category, categoryEn, status, tags } =
+      req.body;
     await blog.update({
       ...(title !== undefined && { title }),
       ...(titleEn !== undefined && { titleEn }),
@@ -134,7 +138,14 @@ exports.checkFacebookConnection = async (req, res) => {
 
 exports.singleblogpublic = async (req, res) => {
   try {
-    const blog = await Blog.findByPk(req.params.id, { include: [authorInclude] });
+    // EN: Public route — only PUBLISHED posts. Drafts (including retired AI
+    //     duplicates) must not be readable by id; admins use /blog/:id.
+    // BN: Public route — শুধু PUBLISHED post। Draft (retired AI duplicate-সহ)
+    //     id দিয়ে পড়া যাবে না; admin /blog/:id ব্যবহার করে।
+    const blog = await Blog.findOne({
+      where: { id: req.params.id, status: 'published' },
+      include: [authorInclude],
+    });
     res.status(200).json({ blog });
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });
@@ -180,10 +191,20 @@ exports.deleteBlogById = async (req, res) => {
 
 exports.allPublishedBlog = async (req, res) => {
   try {
+    // EN: `?summary=1` drops the three full HTML bodies. The list payload
+    //     was ~4 MB (150 posts × 3 languages), which exceeded Next.js's 2 MB
+    //     data-cache limit so every page that shows "recent posts" re-fetched
+    //     it on each request. Cards only need title/excerpt/image/tags.
+    // BN: `?summary=1` তিনটি পূর্ণ HTML body বাদ দেয়। List payload ~৪ MB ছিল
+    //     (১৫০ post × ৩ ভাষা) — Next.js-এর ২ MB data-cache limit ছাড়িয়ে
+    //     যেত, তাই "recent posts" দেখানো প্রতিটি page প্রতি request-এ আবার
+    //     fetch করত। Card-এ শুধু title/excerpt/image/tags লাগে।
+    const summary = ['1', 'true'].includes(String(req.query.summary || ''));
     const publishedBlogs = await Blog.findAll({
       where: { status: 'published' },
       include: [authorInclude],
       order: [['createdAt', 'DESC']],
+      ...(summary ? { attributes: { exclude: ['content', 'contentEn', 'contentJa'] } } : {}),
     });
     res.status(200).json({ publishedBlogs });
   } catch (error) {
