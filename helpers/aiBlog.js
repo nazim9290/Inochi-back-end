@@ -238,8 +238,13 @@ function pickFallbackTopic(slotIndex = 0, avoidTopics = []) {
     for (let i = 0; i < theme.topics.length; i++) {
       const cand = theme.topics[(start + i) % theme.topics.length];
       if (!isNearDuplicate(cand, avoid)) {
-        const category = theme.categories[(days + slotIndex) % theme.categories.length];
-        return { topic: cand, category, theme: theme.key };
+        // EN: No fixed category — the model picks the best fit from this
+        //     theme's list (see buildUserPrompt). The old date-rotated pick
+        //     labelled a hiragana post "Japan student visa".
+        // BN: Fixed category নেই — model এই theme-এর list থেকে সবচেয়ে মানানসই
+        //     বাছে (buildUserPrompt দেখুন)। আগের date-rotated pick hiragana
+        //     post-এ "Japan student visa" label বসাত।
+        return { topic: cand, category: '', theme: theme.key };
       }
     }
   }
@@ -276,7 +281,9 @@ const THEME_ANGLE = {
 };
 
 function buildUserPrompt({ topic, category, keywordsCsv, theme, avoidTitles }) {
-  const cat = category || 'auto-pick from: JLPT, Japan study, scholarships, visa, life in Japan';
+  const themeDef = TOPIC_THEMES.find((t) => t.key === theme) || TOPIC_THEMES[0];
+  const cat =
+    category || `choose the single best fit for this topic from: ${themeDef.categories.join(', ')}`;
   const kw = keywordsCsv
     ? `Weave these keywords naturally where relevant: ${keywordsCsv}.`
     : 'Pick 5–8 long-tail SEO keywords yourself appropriate for Bangladeshi students researching Japan study.';
