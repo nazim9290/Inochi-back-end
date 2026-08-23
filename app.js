@@ -57,7 +57,14 @@ app.use(helmet());
 //     Lead Ads) can validate HMAC signatures. No effect on normal parsing.
 // BN: `verify` raw body buffer রেখে দেয় — webhook route (যেমন Facebook Lead Ads)
 //     HMAC signature যাচাই করতে পারে। সাধারণ parsing-এ কোনো প্রভাব নেই।
-app.use(express.json({ limit: '1mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
+app.use(
+  express.json({
+    limit: '1mb',
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(
   Fingerprint({
@@ -69,11 +76,35 @@ app.use(
 //     Catches obvious crawlers/abuse without affecting normal browsing.
 // BN: Global soft limiter — IP-প্রতি 15 মিনিটে 300 request।
 //     সাধারণ ব্রাউজিং না আটকে স্পষ্ট crawler/abuse ধরে।
+// EN: The public website renders server-side on this same VPS, so every page
+//     build / ISR refresh reaches this API from ONE IP — 2026-08-23 a deploy
+//     burned the 300-request bucket and the site served empty fallbacks.
+//     Requests carrying the shared INTERNAL_API_KEY (x-internal-key) skip the
+//     general limiter; on the strict limiters they are keyed by the visitor
+//     IP the site forwards in x-client-ip (trusted ONLY together with the
+//     key, so the public cannot spoof it). Unset key = no exemption at all.
+// BN: Public website এই একই VPS-এ server-side render হয়, তাই প্রতিটা page
+//     build / ISR refresh একটাই IP থেকে এই API-তে আসে — 2026-08-23 এক deploy
+//     300-request bucket শেষ করে দেয় আর site খালি fallback দেখায়। Shared
+//     INTERNAL_API_KEY (x-internal-key) থাকা request general limiter এড়ায়;
+//     strict limiter-এ site-এর পাঠানো x-client-ip (visitor IP) দিয়ে key হয়
+//     (শুধু key-সহ বিশ্বাস করা হয়, public spoof করতে পারে না)। Key unset =
+//     কোনো ছাড় নেই।
+const { ipKeyGenerator } = require('express-rate-limit');
+const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || '';
+const isInternalRequest = (req) =>
+  Boolean(INTERNAL_API_KEY) && req.get('x-internal-key') === INTERNAL_API_KEY;
+const limiterKey = (req) => {
+  const forwarded = isInternalRequest(req) ? String(req.get('x-client-ip') || '').trim() : '';
+  return ipKeyGenerator(forwarded || req.ip);
+};
+
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: isInternalRequest,
   message: { error: 'Too many requests — please try again later.' },
 });
 app.use('/api', generalLimiter);
@@ -88,6 +119,7 @@ const strictLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: limiterKey,
   message: { error: 'Too many attempts — please wait a few minutes.' },
 });
 app.use('/api/subscriber', strictLimiter);
