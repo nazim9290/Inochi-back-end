@@ -56,6 +56,32 @@ async function collectIssues() {
     });
   }
 
+  // 1.5) SMTP login — if this is broken, contact/booking notifications and
+  //      newsletter double-opt-in confirm emails are silently failing too.
+  try {
+    const nodemailer = require('nodemailer');
+    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      const t = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT) || 587,
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      });
+      await t.verify().catch((err) => {
+        issues.push({
+          title: 'ইমেল পাঠানো বন্ধ — SMTP login ব্যর্থ',
+          detail:
+            `Mail server বলছে: <em>${esc(err.response || err.message)}</em><br/>` +
+            'এর মানে contact/booking notification আর newsletter-এর confirm ' +
+            'ইমেলও যাচ্ছে না। সমাধান: mailbox-এর সঠিক password VPS-এর ' +
+            '<code>/home/inochi/back-end/.env</code>-এ SMTP_PASS-এ বসাতে হবে।',
+        });
+      });
+    }
+  } catch (err) {
+    issues.push({ title: 'SMTP চেক চালানো যায়নি', detail: esc(err.message) });
+  }
+
   // 2) AI blog failures in the last 24 hours.
   try {
     const { AiBlogRun } = require('../models');
@@ -109,11 +135,35 @@ async function runHealthCheck({ notifyWhenHealthy = false } = {}) {
         )
         .join('') +
       '<p style="font-size:12px;color:#94a3b8;">এই ইমেল প্রতিদিন সকালে স্বয়ংক্রিয়ভাবে পরীক্ষা চালিয়ে শুধু সমস্যা পেলেই আসে।</p>';
-    await mailer.sendAdminAlert({
+    const mail = await mailer.sendAdminAlert({
       subject: `[Inochi সাইট] ⚠️ ${issues.length}টা সমস্যা ধরা পড়েছে`,
       title: 'দৈনিক স্বাস্থ্য-পরীক্ষা',
       html,
     });
+
+    // EN: Dashboard fallback — ALWAYS drop the alert into the admin's contact
+    //     list too. If SMTP itself is the broken thing, the email above can
+    //     never arrive; this row is the only alert channel that still works.
+    // BN: Dashboard fallback — alert-টা admin-এর contact list-এও সবসময় ফেলে
+    //     রাখা। SMTP নিজেই ভাঙা থাকলে উপরের ইমেল কোনোদিন পৌঁছাবে না; তখন এই
+    //     row-ই একমাত্র কার্যকর alert।
+    try {
+      const { Contact } = require('../models');
+      await Contact.create({
+        name: '⚠️ সাইট স্বাস্থ্য-পরীক্ষা (স্বয়ংক্রিয়)',
+        email: 'system@inochieducation.com',
+        phone: '',
+        msg:
+          `আজকের স্বয়ংক্রিয় পরীক্ষায় ${issues.length}টা সমস্যা ধরা পড়েছে:\n\n` +
+          issues
+            .map((i, n) => `${n + 1}. ${i.title}\n${i.detail.replace(/<[^>]+>/g, '')}`)
+            .join('\n\n') +
+          (mail?.sent ? '' : '\n\n(ইমেল alert পাঠানো যায়নি — এই বার্তাটাই একমাত্র নোটিশ।)'),
+        source: 'System health check',
+      });
+    } catch (err) {
+      console.error('[health] dashboard alert row failed:', err.message);
+    }
   } else if (notifyWhenHealthy) {
     await mailer.sendAdminAlert({
       subject: '[Inochi সাইট] ✅ দৈনিক পরীক্ষা — সব ঠিক আছে',
