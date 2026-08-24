@@ -251,6 +251,11 @@ app.use((err, req, res, _next) => {
     //     করে না — env flip না করা পর্যন্ত feature dormant ship করে।
     try {
       require('./helpers/blogScheduler').startScheduler();
+      // EN: Daily health check — emails the admin only when something breaks
+      //     (dead FB token, failed AI blog runs). See helpers/healthCheck.js.
+      // BN: দৈনিক health check — কিছু ভাঙলে তবেই admin-কে ইমেল (মরা FB token,
+      //     ব্যর্থ AI blog run)। helpers/healthCheck.js দেখুন।
+      require('./helpers/healthCheck').startHealthCheck();
     } catch (e) {
       console.error('[ai-blog] scheduler boot failed:', e?.message || e);
     }

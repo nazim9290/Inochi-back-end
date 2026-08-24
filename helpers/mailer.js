@@ -333,7 +333,9 @@ exports.notifySubscriber = ({ email }) => {
 exports.sendNewsletter = async ({ subject, html, recipients }) => {
   const transporter = buildTransporter();
   if (!transporter) return { ok: false, reason: 'smtp-not-configured', sent: 0, failed: 0 };
-  const list = Array.from(new Set((recipients || []).filter(Boolean).map((e) => String(e).trim().toLowerCase())));
+  const list = Array.from(
+    new Set((recipients || []).filter(Boolean).map((e) => String(e).trim().toLowerCase()))
+  );
   if (list.length === 0) return { ok: false, reason: 'no-recipients', sent: 0, failed: 0 };
 
   const BATCH = 50;
@@ -417,3 +419,17 @@ exports.brandWrap = (title, contentHtml) => wrap(title, contentHtml);
 // EN: True when SMTP credentials are present so the UI can warn early.
 // BN: SMTP credential থাকলে true — UI আগেই warn করতে পারে।
 exports.smtpReady = () => Boolean(buildTransporter());
+
+// EN: Generic admin alert — used by the daily site health check
+//     (helpers/healthCheck.js). Caller supplies ready-made inner HTML;
+//     we wrap it in the branded shell and send to ADMIN_EMAIL.
+// BN: Generic admin alert — দৈনিক site health check
+//     (helpers/healthCheck.js) ব্যবহার করে। Caller ভেতরের HTML দেয়;
+//     আমরা branded shell-এ মুড়ে ADMIN_EMAIL-এ পাঠাই।
+exports.sendAdminAlert = ({ subject, title, html }) => {
+  return send({
+    to: adminAddress(),
+    subject,
+    html: wrap(title || 'Site health check', html),
+  });
+};

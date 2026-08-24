@@ -12,6 +12,26 @@ const getSettings = async () => {
   return settings || null;
 };
 
+// EN: Ask Facebook's crawler to (re)scrape the URL BEFORE we publish the feed
+//     post. Brand-new blog URLs have never been seen by FB's scraper, so
+//     without this the post can appear with no image/title preview. Failure
+//     is ignored — the post still goes out.
+// BN: Feed post-এর আগে Facebook-এর crawler-কে URL-টা (আবার) scrape করতে বলা।
+//     একদম নতুন blog URL FB-র scraper আগে দেখেনি — এটা না করলে post-এ
+//     ছবি/title preview না-ও আসতে পারে। ব্যর্থ হলে উপেক্ষা — post তবুও যায়।
+const prescrapeUrl = async (url, accessToken) => {
+  if (!url || !accessToken) return;
+  try {
+    await fetch(`${GRAPH_BASE}/`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: url, scrape: true, access_token: accessToken }),
+    });
+  } catch {
+    /* EN: best-effort only. BN: শুধু best-effort। */
+  }
+};
+
 // Public — caller passes blog metadata. We compose a friendly message and
 // call /<page_id>/feed. Returns {ok:true, postId} on success.
 exports.postBlogToPage = async ({ title, summary, blogUrl, imageUrl }) => {
@@ -24,6 +44,7 @@ exports.postBlogToPage = async ({ title, summary, blogUrl, imageUrl }) => {
   }
 
   const message = [title, summary, blogUrl].filter(Boolean).join('\n\n');
+  await prescrapeUrl(blogUrl, s.fbPageAccessToken);
 
   // /feed accepts {message, link} for link posts. With imageUrl, /photos works
   // for an image post — we use /feed because link previews drive more clicks.
@@ -57,6 +78,7 @@ exports.postManually = async ({ title, summary, blogUrl, imageUrl }) => {
     return { ok: false, reason: 'fb-not-configured' };
   }
   const message = [title, summary, blogUrl].filter(Boolean).join('\n\n');
+  await prescrapeUrl(blogUrl, s.fbPageAccessToken);
   try {
     const res = await fetch(`${GRAPH_BASE}/${s.fbPageId}/feed`, {
       method: 'POST',
@@ -112,6 +134,7 @@ exports.postContentToPage = async ({ kind = 'content', title, summary, url }) =>
     return { ok: false, reason: 'fb-content-auto-post-disabled' };
   }
   const message = [title, summary, url].filter(Boolean).join('\n\n');
+  await prescrapeUrl(url, s.fbPageAccessToken);
   try {
     const res = await fetch(`${GRAPH_BASE}/${s.fbPageId}/feed`, {
       method: 'POST',
