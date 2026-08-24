@@ -208,6 +208,45 @@ exports.createStory = async (req, res) => {
   }
 };
 
+// EN: Manual "post this story to Facebook again". The auto-post fires once, on
+//     create — so when that first post went out with a stale link preview (or
+//     went out while auto-post was switched off), this is how the admin sends a
+//     corrected one. It deliberately bypasses the auto-post toggle, and it
+//     re-scrapes the URL first, so the new post picks up the current headline
+//     and the student's photo rather than whatever Facebook cached earlier.
+//     Deleting the old post stays a manual step in Facebook — this endpoint
+//     never removes anything.
+// BN: হাতে "এই story আবার Facebook-এ পোস্ট করুন"। Auto-post শুধু একবারই যায়,
+//     create-এর সময় — তাই প্রথম পোস্টটা পুরনো link preview নিয়ে গেলে (বা
+//     auto-post বন্ধ থাকা অবস্থায় গেলে) এখান থেকেই ঠিকটা পাঠানো যায়। ইচ্ছা
+//     করেই auto-post toggle এড়ায়, আর আগে URL re-scrape করে — তাই নতুন পোস্টে
+//     এখনকার headline আর student-এর ছবিই যায়, Facebook-এর পুরনো cache নয়।
+//     পুরনো পোস্ট মোছা Facebook-এ হাতেই করতে হয় — এই endpoint কিছু মোছে না।
+exports.postStoryToFacebook = async (req, res) => {
+  try {
+    const story = await SuccessStory.findByPk(req.params.id);
+    if (!story) return res.status(404).json({ error: 'Story not found' });
+
+    const result = await require('../helpers/facebook').postManually({
+      title: `🎉 সাফল্যের গল্প: ${storyHeadline(story)}`,
+      summary: String(story.story || story.storyEn || '').slice(0, 220),
+      blogUrl: `${process.env.PUBLIC_SITE_URL || 'https://inochieducation.com'}/bn/success/${story.id}`,
+    });
+    if (!result.ok) return res.status(502).json({ error: result.reason });
+
+    logAudit(req, {
+      action: 'update',
+      entity: 'SuccessStory',
+      entityId: story.id,
+      summary: `Story posted to Facebook (${story.studentName})`,
+    });
+    res.json({ message: 'Posted to Facebook', postId: result.postId });
+  } catch (err) {
+    console.error('Manual story FB post failed:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 exports.updateStory = async (req, res) => {
   try {
     const story = await SuccessStory.findByPk(req.params.id);

@@ -82,6 +82,9 @@ router.put('/jlpt-courses/:id', requireAuth, checkAdmin, c.updateCourse);
 router.delete('/jlpt-courses/:id', requireAuth, checkAdmin, c.deleteCourse);
 
 router.post('/success-stories', requireAuth, checkAdmin, c.createStory);
+// EN: Re-send an existing story to the Facebook page (see controller).
+// BN: বিদ্যমান story আবার Facebook page-এ পাঠায় (controller দেখুন)।
+router.post('/success-stories/:id/post-to-facebook', requireAuth, checkAdmin, c.postStoryToFacebook);
 router.put('/success-stories/:id', requireAuth, checkAdmin, c.updateStory);
 router.delete('/success-stories/:id', requireAuth, checkAdmin, c.deleteStory);
 
