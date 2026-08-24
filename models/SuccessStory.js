@@ -6,6 +6,17 @@ const SuccessStory = sequelize.define(
   {
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     studentName: { type: DataTypes.STRING, allowNull: false }, // names stay
+    // EN: Optional admin-written headline. It becomes the share/OG title on
+    //     /success/<id> and the headline of the Facebook auto-post, so it is
+    //     the one line most people read. Left empty, the site composes one
+    //     from the student's name, school and city — the admin never has to
+    //     fill it in.
+    // BN: Optional admin-লেখা headline। /success/<id>-এর share/OG title আর
+    //     Facebook auto-post-এর headline হিসেবে যায় — বেশিরভাগ মানুষ এই এক
+    //     লাইনই পড়ে। খালি রাখলে student-এর নাম, স্কুল আর শহর থেকে নিজেই
+    //     বানিয়ে নেয় — admin-কে কখনো ভরতে হয় না।
+    headline: { type: DataTypes.STRING(200), defaultValue: '' },
+    headlineEn: { type: DataTypes.STRING(200), defaultValue: '' },
     university: { type: DataTypes.STRING, defaultValue: '' },
     location: { type: DataTypes.STRING, defaultValue: '' },
     locationEn: { type: DataTypes.STRING, defaultValue: '' },

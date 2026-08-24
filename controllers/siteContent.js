@@ -162,6 +162,27 @@ exports.listStories = async (req, res) => {
   }
 };
 
+// EN: One headline for a success story, used as the Facebook auto-post
+//     headline. Prefers the admin's own Bangla headline, then the English one,
+//     and otherwise composes a readable Bangla line from the facts already on
+//     the record — never a bare "Success story". The public site builds its
+//     og:title with the same precedence, so the post and the link preview
+//     always agree.
+// BN: Success story-র এক লাইনের headline — Facebook auto-post-এ যায়। আগে
+//     admin-এর নিজের বাংলা headline, তারপর ইংরেজিটা, না থাকলে record-এ থাকা
+//     তথ্য দিয়েই পড়ার মতো বাংলা লাইন বানায় — কখনোই খালি "Success story" নয়।
+//     Public site একই precedence-এ og:title বানায়, তাই post আর link preview
+//     সবসময় মেলে।
+const storyHeadline = (story) => {
+  const own = String(story.headline || story.headlineEn || '').trim();
+  if (own) return own;
+
+  const place = String(story.location || story.locationEn || '').trim();
+  const school = String(story.university || '').trim();
+  const tail = [school, place].filter(Boolean).join(' · ');
+  return tail ? `${story.studentName} — ${tail}` : String(story.studentName || '');
+};
+
 exports.createStory = async (req, res) => {
   try {
     const story = await SuccessStory.create(req.body);
@@ -173,7 +194,7 @@ exports.createStory = async (req, res) => {
       require('../helpers/facebook')
         .postContentToPage({
           kind: 'success-story',
-          title: `🎉 সাফল্যের গল্প: ${story.studentName}${story.university ? ` — ${story.university}` : ''}`,
+          title: `🎉 সাফল্যের গল্প: ${storyHeadline(story)}`,
           summary: String(story.story || story.storyEn || '').slice(0, 220),
           url: `${process.env.PUBLIC_SITE_URL || 'https://inochieducation.com'}/bn/success/${story.id}`,
         })
