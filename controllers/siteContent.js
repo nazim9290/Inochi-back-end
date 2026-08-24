@@ -150,7 +150,10 @@ exports.listStories = async (req, res) => {
     const where = req.query.all === 'true' ? {} : { published: true };
     const stories = await SuccessStory.findAll({
       where,
-      order: [['sortOrder', 'ASC'], ['createdAt', 'DESC']],
+      order: [
+        ['sortOrder', 'ASC'],
+        ['createdAt', 'DESC'],
+      ],
     });
     res.json({ stories });
   } catch (err) {
@@ -162,6 +165,21 @@ exports.listStories = async (req, res) => {
 exports.createStory = async (req, res) => {
   try {
     const story = await SuccessStory.create(req.body);
+    // EN: Fire-and-forget FB auto-post — new success stories are the page's
+    //     best organic content.
+    // BN: Fire-and-forget FB auto-post — নতুন success story page-এর সেরা
+    //     organic content।
+    if (story.published !== false) {
+      require('../helpers/facebook')
+        .postContentToPage({
+          kind: 'success-story',
+          title: `🎉 সাফল্যের গল্প: ${story.studentName}${story.university ? ` — ${story.university}` : ''}`,
+          summary: String(story.story || story.storyEn || '').slice(0, 220),
+          url: `${process.env.PUBLIC_SITE_URL || 'https://inochieducation.com'}/bn/success/${story.id}`,
+        })
+        .then((r) => console.log('[fb-auto] story:', r.ok ? r.postId : `skipped (${r.reason})`))
+        .catch(() => {});
+    }
     res.status(201).json({ message: 'Story created', story });
   } catch (err) {
     console.error('Error creating story:', err);
@@ -199,7 +217,10 @@ exports.listFaqs = async (req, res) => {
     const where = req.query.all === 'true' ? {} : { published: true };
     const faqs = await Faq.findAll({
       where,
-      order: [['sortOrder', 'ASC'], ['createdAt', 'ASC']],
+      order: [
+        ['sortOrder', 'ASC'],
+        ['createdAt', 'ASC'],
+      ],
     });
     res.json({ faqs });
   } catch (err) {
@@ -252,7 +273,10 @@ exports.listBranches = async (req, res) => {
     const where = req.query.all === 'true' ? {} : { published: true };
     const branches = await Branch.findAll({
       where,
-      order: [['sortOrder', 'ASC'], ['city', 'ASC']],
+      order: [
+        ['sortOrder', 'ASC'],
+        ['city', 'ASC'],
+      ],
     });
     res.json({ branches });
   } catch (err) {
@@ -346,6 +370,28 @@ exports.createAchievement = async (req, res) => {
       entityId: a.id,
       summary: `Achievement created (${a.type})`,
     });
+    // EN: Fire-and-forget FB auto-post — visa wins / arrivals are proof posts.
+    // BN: Fire-and-forget FB auto-post — visa win / arrival হলো proof post।
+    if (a.published !== false) {
+      const kindLabel =
+        {
+          'visa-win': '🎌 ভিসা সাফল্য',
+          arrival: '🛬 জাপানে পৌঁছালো',
+          event: '📸 ইভেন্ট',
+          class: '🏫 ক্লাস',
+        }[a.type] || '🏆 অর্জন';
+      require('../helpers/facebook')
+        .postContentToPage({
+          kind: 'achievement',
+          title: `${kindLabel}${a.studentName ? `: ${a.studentName}` : ''}${a.school ? ` — ${a.school}` : ''}`,
+          summary: String(a.captionBn || a.captionEn || '').slice(0, 220),
+          url: `${process.env.PUBLIC_SITE_URL || 'https://inochieducation.com'}/bn/achievements/${a.id}`,
+        })
+        .then((r) =>
+          console.log('[fb-auto] achievement:', r.ok ? r.postId : `skipped (${r.reason})`)
+        )
+        .catch(() => {});
+    }
     res.status(201).json({ message: 'Achievement created', achievement: a });
   } catch (err) {
     console.error('Error creating achievement:', err);
@@ -592,7 +638,10 @@ exports.listBdCities = async (req, res) => {
     const where = req.query.all === 'true' ? {} : { published: true };
     const rows = await BdCity.findAll({
       where,
-      order: [['sortOrder', 'ASC'], ['name', 'ASC']],
+      order: [
+        ['sortOrder', 'ASC'],
+        ['name', 'ASC'],
+      ],
     });
     // EN: Admin form needs raw DB rows; public site needs the shaped form.
     // BN: Admin form raw DB row চায়; public site shaped form।
@@ -705,7 +754,10 @@ exports.listJpCities = async (req, res) => {
     const where = req.query.all === 'true' ? {} : { published: true };
     const rows = await JpCity.findAll({
       where,
-      order: [['sortOrder', 'ASC'], ['name', 'ASC']],
+      order: [
+        ['sortOrder', 'ASC'],
+        ['name', 'ASC'],
+      ],
     });
     const cities = req.query.raw === 'true' ? rows : rows.map(shapeJpCity);
     res.json({ cities });
@@ -730,7 +782,12 @@ exports.getJpCity = async (req, res) => {
 exports.createJpCity = async (req, res) => {
   try {
     const city = await JpCity.create(req.body);
-    logAudit(req, { action: 'create', entity: 'JpCity', entityId: city.id, summary: `JP city added (${city.name || city.slug})` });
+    logAudit(req, {
+      action: 'create',
+      entity: 'JpCity',
+      entityId: city.id,
+      summary: `JP city added (${city.name || city.slug})`,
+    });
     res.status(201).json({ message: 'City created', city });
   } catch (err) {
     console.error('Error creating jp city:', err);
@@ -746,7 +803,12 @@ exports.updateJpCity = async (req, res) => {
     const city = await JpCity.findByPk(req.params.id);
     if (!city) return res.status(404).json({ error: 'City not found' });
     await city.update(req.body);
-    logAudit(req, { action: 'update', entity: 'JpCity', entityId: city.id, summary: `JP city updated (${city.name || city.slug})` });
+    logAudit(req, {
+      action: 'update',
+      entity: 'JpCity',
+      entityId: city.id,
+      summary: `JP city updated (${city.name || city.slug})`,
+    });
     res.json({ message: 'City updated', city });
   } catch (err) {
     console.error('Error updating jp city:', err);
@@ -761,7 +823,12 @@ exports.deleteJpCity = async (req, res) => {
   try {
     const deleted = await JpCity.destroy({ where: { id: req.params.id } });
     if (!deleted) return res.status(404).json({ error: 'City not found' });
-    logAudit(req, { action: 'delete', entity: 'JpCity', entityId: req.params.id, summary: 'JP city deleted' });
+    logAudit(req, {
+      action: 'delete',
+      entity: 'JpCity',
+      entityId: req.params.id,
+      summary: 'JP city deleted',
+    });
     res.json({ message: 'City deleted' });
   } catch (err) {
     console.error('Error deleting jp city:', err);
@@ -801,7 +868,11 @@ exports.listEvents = async (req, res) => {
     if (req.query.type) where.type = req.query.type;
     const rows = await Event.findAll({
       where,
-      order: [['highlight', 'DESC'], ['eventDate', 'ASC'], ['sortOrder', 'ASC']],
+      order: [
+        ['highlight', 'DESC'],
+        ['eventDate', 'ASC'],
+        ['sortOrder', 'ASC'],
+      ],
     });
     const events = req.query.raw === 'true' ? rows : rows.map(shapeEvent);
     res.json({ events });
@@ -814,7 +885,31 @@ exports.listEvents = async (req, res) => {
 exports.createEvent = async (req, res) => {
   try {
     const event = await Event.create(req.body);
-    logAudit(req, { action: 'create', entity: 'Event', entityId: event.id, summary: `Event added (${event.title})` });
+    logAudit(req, {
+      action: 'create',
+      entity: 'Event',
+      entityId: event.id,
+      summary: `Event added (${event.title})`,
+    });
+    // EN: Fire-and-forget FB auto-post for new published events.
+    // BN: নতুন published event-এর fire-and-forget FB auto-post।
+    if (event.published !== false) {
+      require('../helpers/facebook')
+        .postContentToPage({
+          kind: 'event',
+          title: `📅 ${event.title || event.titleEn}`,
+          summary: [
+            String(event.description || event.descriptionEn || '').slice(0, 200),
+            [event.eventDate, event.time].filter(Boolean).join(' · '),
+            event.location || event.locationEn || '',
+          ]
+            .filter(Boolean)
+            .join('\n'),
+          url: `${process.env.PUBLIC_SITE_URL || 'https://inochieducation.com'}/bn/events`,
+        })
+        .then((r) => console.log('[fb-auto] event:', r.ok ? r.postId : `skipped (${r.reason})`))
+        .catch(() => {});
+    }
     res.status(201).json({ message: 'Event created', event });
   } catch (err) {
     console.error('Error creating event:', err);
@@ -827,7 +922,12 @@ exports.updateEvent = async (req, res) => {
     const event = await Event.findByPk(req.params.id);
     if (!event) return res.status(404).json({ error: 'Event not found' });
     await event.update(req.body);
-    logAudit(req, { action: 'update', entity: 'Event', entityId: event.id, summary: `Event updated (${event.title})` });
+    logAudit(req, {
+      action: 'update',
+      entity: 'Event',
+      entityId: event.id,
+      summary: `Event updated (${event.title})`,
+    });
     res.json({ message: 'Event updated', event });
   } catch (err) {
     console.error('Error updating event:', err);
@@ -839,7 +939,12 @@ exports.deleteEvent = async (req, res) => {
   try {
     const deleted = await Event.destroy({ where: { id: req.params.id } });
     if (!deleted) return res.status(404).json({ error: 'Event not found' });
-    logAudit(req, { action: 'delete', entity: 'Event', entityId: req.params.id, summary: 'Event deleted' });
+    logAudit(req, {
+      action: 'delete',
+      entity: 'Event',
+      entityId: req.params.id,
+      summary: 'Event deleted',
+    });
     res.json({ message: 'Event deleted' });
   } catch (err) {
     console.error('Error deleting event:', err);
@@ -862,7 +967,11 @@ exports.listChecklist = async (req, res) => {
     const where = req.query.all === 'true' ? {} : { published: true };
     const rows = await ChecklistItem.findAll({
       where,
-      order: [['groupOrder', 'ASC'], ['sortOrder', 'ASC'], ['createdAt', 'ASC']],
+      order: [
+        ['groupOrder', 'ASC'],
+        ['sortOrder', 'ASC'],
+        ['createdAt', 'ASC'],
+      ],
     });
 
     if (req.query.raw === 'true') {
@@ -899,7 +1008,12 @@ exports.listChecklist = async (req, res) => {
 exports.createChecklistItem = async (req, res) => {
   try {
     const item = await ChecklistItem.create(req.body);
-    logAudit(req, { action: 'create', entity: 'ChecklistItem', entityId: item.id, summary: `Checklist item added (${item.categoryKey})` });
+    logAudit(req, {
+      action: 'create',
+      entity: 'ChecklistItem',
+      entityId: item.id,
+      summary: `Checklist item added (${item.categoryKey})`,
+    });
     res.status(201).json({ message: 'Item created', item });
   } catch (err) {
     console.error('Error creating checklist item:', err);
@@ -912,7 +1026,12 @@ exports.updateChecklistItem = async (req, res) => {
     const item = await ChecklistItem.findByPk(req.params.id);
     if (!item) return res.status(404).json({ error: 'Item not found' });
     await item.update(req.body);
-    logAudit(req, { action: 'update', entity: 'ChecklistItem', entityId: item.id, summary: `Checklist item updated (${item.categoryKey})` });
+    logAudit(req, {
+      action: 'update',
+      entity: 'ChecklistItem',
+      entityId: item.id,
+      summary: `Checklist item updated (${item.categoryKey})`,
+    });
     res.json({ message: 'Item updated', item });
   } catch (err) {
     console.error('Error updating checklist item:', err);
@@ -924,7 +1043,12 @@ exports.deleteChecklistItem = async (req, res) => {
   try {
     const deleted = await ChecklistItem.destroy({ where: { id: req.params.id } });
     if (!deleted) return res.status(404).json({ error: 'Item not found' });
-    logAudit(req, { action: 'delete', entity: 'ChecklistItem', entityId: req.params.id, summary: 'Checklist item deleted' });
+    logAudit(req, {
+      action: 'delete',
+      entity: 'ChecklistItem',
+      entityId: req.params.id,
+      summary: 'Checklist item deleted',
+    });
     res.json({ message: 'Item deleted' });
   } catch (err) {
     console.error('Error deleting checklist item:', err);
@@ -957,7 +1081,10 @@ exports.listScamItems = async (req, res) => {
     const where = req.query.all === 'true' ? {} : { published: true };
     const rows = await ScamItem.findAll({
       where,
-      order: [['sortOrder', 'ASC'], ['createdAt', 'ASC']],
+      order: [
+        ['sortOrder', 'ASC'],
+        ['createdAt', 'ASC'],
+      ],
     });
 
     if (req.query.raw === 'true') {
@@ -981,7 +1108,12 @@ exports.listScamItems = async (req, res) => {
 exports.createScamItem = async (req, res) => {
   try {
     const item = await ScamItem.create(req.body);
-    logAudit(req, { action: 'create', entity: 'ScamItem', entityId: item.id, summary: `Scam item added (${item.kind})` });
+    logAudit(req, {
+      action: 'create',
+      entity: 'ScamItem',
+      entityId: item.id,
+      summary: `Scam item added (${item.kind})`,
+    });
     res.status(201).json({ message: 'Item created', item });
   } catch (err) {
     console.error('Error creating scam item:', err);
@@ -994,7 +1126,12 @@ exports.updateScamItem = async (req, res) => {
     const item = await ScamItem.findByPk(req.params.id);
     if (!item) return res.status(404).json({ error: 'Item not found' });
     await item.update(req.body);
-    logAudit(req, { action: 'update', entity: 'ScamItem', entityId: item.id, summary: `Scam item updated (${item.kind})` });
+    logAudit(req, {
+      action: 'update',
+      entity: 'ScamItem',
+      entityId: item.id,
+      summary: `Scam item updated (${item.kind})`,
+    });
     res.json({ message: 'Item updated', item });
   } catch (err) {
     console.error('Error updating scam item:', err);
@@ -1006,7 +1143,12 @@ exports.deleteScamItem = async (req, res) => {
   try {
     const deleted = await ScamItem.destroy({ where: { id: req.params.id } });
     if (!deleted) return res.status(404).json({ error: 'Item not found' });
-    logAudit(req, { action: 'delete', entity: 'ScamItem', entityId: req.params.id, summary: 'Scam item deleted' });
+    logAudit(req, {
+      action: 'delete',
+      entity: 'ScamItem',
+      entityId: req.params.id,
+      summary: 'Scam item deleted',
+    });
     res.json({ message: 'Item deleted' });
   } catch (err) {
     console.error('Error deleting scam item:', err);

@@ -325,6 +325,28 @@ async function runOnce({ source = 'auto', slotIndex = 0 } = {}) {
       await queueRow.save();
     }
     pingPaths(['/blog', `/blog/${blog.id}`]);
+    // EN: Auto-post to the Facebook page. AI posts are born "published", so
+    //     the controller's publish hook never sees them — this is the only
+    //     place they can reach FB. Fire-and-forget; gated on fbAutoPostBlogs
+    //     + token inside the helper.
+    // BN: Facebook page-এ auto-post। AI post জন্ম থেকেই "published", তাই
+    //     controller-এর publish hook এদের দেখে না — FB-তে যাওয়ার একমাত্র পথ
+    //     এটাই। Fire-and-forget; fbAutoPostBlogs + token-এর গেট helper-এ।
+    require('./facebook')
+      .postBlogToPage({
+        title: blog.title || blog.titleEn,
+        summary: String(blog.content || blog.contentEn || '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 240),
+        blogUrl: `${process.env.PUBLIC_SITE_URL || 'https://inochieducation.com'}/bn/blog/${blog.id}`,
+        imageUrl: blog.image?.url,
+      })
+      .then((r) =>
+        console.log('[ai-blog] fb auto-post:', r.ok ? r.postId : `skipped (${r.reason})`)
+      )
+      .catch(() => {});
     const runRow = await recordRun({
       topic,
       source: usedSource,

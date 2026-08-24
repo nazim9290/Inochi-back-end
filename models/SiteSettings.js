@@ -93,6 +93,13 @@ const SiteSettings = sequelize.define(
     fbPageAccessToken: { type: DataTypes.TEXT, defaultValue: '' },
     fbAppId: { type: DataTypes.STRING, defaultValue: '' },
     fbAutoPostBlogs: { type: DataTypes.BOOLEAN, defaultValue: false },
+    // EN: Auto-post NEW events/seminars/success stories/achievements to the
+    //     FB page. Separate from fbAutoPostBlogs so the two can be toggled
+    //     independently. Default true — activates as soon as a token is set.
+    // BN: নতুন event/seminar/success story/achievement FB page-এ auto-post।
+    //     fbAutoPostBlogs থেকে আলাদা — দুটো আলাদাভাবে on/off করা যায়।
+    //     Default true — token বসালেই চালু হয়ে যায়।
+    fbAutoPostContent: { type: DataTypes.BOOLEAN, defaultValue: true },
     fbPixelId: { type: DataTypes.STRING, defaultValue: '' },
     fbMessengerEnabled: { type: DataTypes.BOOLEAN, defaultValue: false },
     fbMessengerPageId: { type: DataTypes.STRING, defaultValue: '' },

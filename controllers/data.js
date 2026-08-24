@@ -66,7 +66,9 @@ exports.registerPageDataUpdate = async (req, res) => {
       subtitile: subtitle,
     });
     await page.save();
-    return res.status(200).json({ message: 'Page data updated successfully', updatedPageData: page });
+    return res
+      .status(200)
+      .json({ message: 'Page data updated successfully', updatedPageData: page });
   } catch (error) {
     console.error('Error updating page data:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -100,10 +102,14 @@ exports.topCaruselDataCreate = async (req, res) => {
     if (existing) {
       existing.image = image;
       await existing.save();
-      return res.status(200).json({ message: 'Top carousel image updated successfully', image: existing });
+      return res
+        .status(200)
+        .json({ message: 'Top carousel image updated successfully', image: existing });
     }
     const created = await ImageTopCarousel.create({ image });
-    return res.status(201).json({ message: 'Top carousel image created successfully', image: created });
+    return res
+      .status(201)
+      .json({ message: 'Top carousel image created successfully', image: created });
   } catch (err) {
     console.error('Error updating/creating top carousel image:', err);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -125,11 +131,19 @@ exports.getTopCaruselImage = async (req, res) => {
 
 exports.createTeam = async (req, res) => {
   const {
-    designation, designationEn,
+    designation,
+    designationEn,
     position,
-    name, nameEn,
-    bio, bioEn,
-    image, facebook, twiter, email, linkdin, youtube,
+    name,
+    nameEn,
+    bio,
+    bioEn,
+    image,
+    facebook,
+    twiter,
+    email,
+    linkdin,
+    youtube,
   } = req.body;
   try {
     const team = await Team.create({
@@ -211,9 +225,7 @@ exports.ReviewCreate = async (req, res) => {
 exports.Review = async (req, res) => {
   try {
     const reviews = await Review.findAll({
-      include: [
-        { model: User, as: 'postedByUser', attributes: ['id', 'name', 'email'] },
-      ],
+      include: [{ model: User, as: 'postedByUser', attributes: ['id', 'name', 'email'] }],
       order: [['createdAt', 'DESC']],
     });
     res.json(reviews);
@@ -226,7 +238,7 @@ exports.Review = async (req, res) => {
 exports.createSeminar = async (req, res) => {
   const { subtitle, subtitleEn, title, titleEn, image, time, date } = req.body;
   try {
-    await Seminer.create({
+    const seminar = await Seminer.create({
       title,
       titleEn: titleEn || '',
       subtitle,
@@ -235,6 +247,22 @@ exports.createSeminar = async (req, res) => {
       time,
       date,
     });
+    // EN: Fire-and-forget FB auto-post for the new seminar announcement.
+    // BN: নতুন seminar ঘোষণার fire-and-forget FB auto-post।
+    require('../helpers/facebook')
+      .postContentToPage({
+        kind: 'seminar',
+        title: `🎓 ফ্রি সেমিনার: ${seminar.title || seminar.titleEn}`,
+        summary: [
+          seminar.subtitle || seminar.subtitleEn || '',
+          [seminar.date, seminar.time].filter(Boolean).join(' · '),
+        ]
+          .filter(Boolean)
+          .join('\n'),
+        url: `${process.env.PUBLIC_SITE_URL || 'https://inochieducation.com'}/bn/seminars`,
+      })
+      .then((r) => console.log('[fb-auto] seminar:', r.ok ? r.postId : `skipped (${r.reason})`))
+      .catch(() => {});
     res.status(201).json({ message: 'Seminer created successfully' });
   } catch (error) {
     console.error('Error creating Seminer:', error);
@@ -317,7 +345,10 @@ exports.getAllBrand = async (req, res) => {
     const where = req.query.all === 'true' ? {} : { published: true };
     const brand = await Brand.findAll({
       where,
-      order: [['sortOrder', 'ASC'], ['createdAt', 'DESC']],
+      order: [
+        ['sortOrder', 'ASC'],
+        ['createdAt', 'DESC'],
+      ],
     });
     res.status(200).json({ brand });
   } catch (error) {

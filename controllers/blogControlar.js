@@ -18,7 +18,11 @@ const buildFbPayload = (blog) => {
   return {
     title: blog.title || '',
     summary: summarise(blog.content || ''),
-    blogUrl: `${SITE_URL}/bn/post/${id}`,
+    // EN: /bn/post/<id> was a legacy path (404 today) — the live route is
+    //     /bn/blog/<id>. A broken link kills the FB link preview.
+    // BN: /bn/post/<id> পুরোনো path (এখন 404) — আসল route /bn/blog/<id>।
+    //     Link ভাঙা থাকলে FB-র link preview-ও আসে না।
+    blogUrl: `${SITE_URL}/bn/blog/${id}`,
     imageUrl: blog.image?.url,
   };
 };

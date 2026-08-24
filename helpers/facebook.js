@@ -94,3 +94,38 @@ exports.checkToken = async () => {
     return { ok: false, reason: err.message };
   }
 };
+
+// EN: Generic auto-post for NEW public content (event, seminar, success story,
+//     achievement). Gated on the `fbAutoPostContent` toggle so the admin can
+//     switch content posts off while keeping blog auto-post (fbAutoPostBlogs)
+//     on, or vice versa. The link preview carries the image, so no imageUrl.
+// BN: নতুন public content-এর (event, seminar, success story, achievement)
+//     generic auto-post। `fbAutoPostContent` toggle-এ gated — admin চাইলে blog
+//     auto-post (fbAutoPostBlogs) চালু রেখে content post বন্ধ করতে পারেন,
+//     উল্টোটাও। Link preview-ই ছবি দেখায়, তাই আলাদা imageUrl লাগে না।
+exports.postContentToPage = async ({ kind = 'content', title, summary, url }) => {
+  const s = await getSettings();
+  if (!s?.fbPageId || !s?.fbPageAccessToken) {
+    return { ok: false, reason: 'fb-not-configured' };
+  }
+  if (s.fbAutoPostContent === false) {
+    return { ok: false, reason: 'fb-content-auto-post-disabled' };
+  }
+  const message = [title, summary, url].filter(Boolean).join('\n\n');
+  try {
+    const res = await fetch(`${GRAPH_BASE}/${s.fbPageId}/feed`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message, link: url, access_token: s.fbPageAccessToken }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      console.error(`FB ${kind} post error:`, data.error?.message || data);
+      return { ok: false, reason: data.error?.message || 'graph-error', detail: data };
+    }
+    return { ok: true, postId: data.id };
+  } catch (err) {
+    console.error(`FB ${kind} post failed:`, err);
+    return { ok: false, reason: err.message };
+  }
+};
