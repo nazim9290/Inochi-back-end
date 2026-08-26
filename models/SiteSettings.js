@@ -104,6 +104,16 @@ const SiteSettings = sequelize.define(
     fbMessengerEnabled: { type: DataTypes.BOOLEAN, defaultValue: false },
     fbMessengerPageId: { type: DataTypes.STRING, defaultValue: '' },
 
+    // EN: Microsoft Clarity project id — free heatmaps and session recordings.
+    //     The frontend already reads settings.clarityProjectId; until this
+    //     field existed it always came back undefined, so Clarity could only be
+    //     switched on through a build-time env var. Empty = Clarity off.
+    // BN: Microsoft Clarity project id — ফ্রি heatmap আর session recording।
+    //     Frontend আগে থেকেই settings.clarityProjectId পড়ে; এই field না
+    //     থাকায় সেটা সবসময় undefined আসত, তাই Clarity শুধু build-time env var
+    //     দিয়েই চালু করা যেত। খালি রাখলে Clarity বন্ধ।
+    clarityProjectId: { type: DataTypes.STRING, defaultValue: '' },
+
     // Google integration
     gaTrackingId: { type: DataTypes.STRING, defaultValue: '' },
     googleSiteVerification: { type: DataTypes.STRING, defaultValue: '' },
