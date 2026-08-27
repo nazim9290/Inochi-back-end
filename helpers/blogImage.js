@@ -130,6 +130,15 @@ async function searchCommonsImage(query) {
     const meta = ii.extmetadata || {};
     const license =
       stripHtml(meta.LicenseShortName?.value) || stripHtml(meta.License?.value) || 'see source';
+    // EN: The licence URL, not only its short name. "CC BY-SA 4.0" as bare
+    //     text tells a reader which licence applies but leaves them to go
+    //     and find it; the URL is what makes the credit a complete one.
+    //     Commons does not always supply it — absent is fine, the caption
+    //     then shows the name as plain text.
+    // BN: শুধু লাইসেন্সের নাম নয়, ঠিকানাও। "CC BY-SA 4.0" শুধু লেখা থাকলে
+    //     পাঠককে নিজে খুঁজতে হয়; URL-ই কৃতজ্ঞতার স্বীকারকে সম্পূর্ণ করে।
+    //     Commons সবসময় দেয় না — না থাকলে নামটি সাদা লেখাতেই দেখায়।
+    const licenseUrl = stripHtml(meta.LicenseUrl?.value);
     return {
       thumbUrl,
       descriptionUrl:
@@ -137,6 +146,7 @@ async function searchCommonsImage(query) {
         `https://commons.wikimedia.org/wiki/${encodeURIComponent(page.title || '')}`,
       artist: stripHtml(meta.Artist?.value),
       license,
+      licenseUrl,
     };
   }
   return null;
@@ -247,6 +257,14 @@ async function generateCoverImage(rawQuery, seedSource) {
         name: creditName,
         source: 'Wikimedia Commons',
         sourceLink: found.descriptionUrl,
+        // EN: Kept apart from `name` so the caption can render the
+        //     photographer, the source and the licence as three separate
+        //     things — and link the last two — rather than one long string.
+        // BN: `name`-এর থেকে আলাদা রাখা, যাতে ক্যাপশনে ফটোগ্রাফার, উৎস ও
+        //     লাইসেন্স তিনটি আলাদা জিনিস হিসেবে দেখানো যায়, এক লম্বা লাইন নয়।
+        artist: found.artist || '',
+        license: found.license || '',
+        licenseLink: found.licenseUrl || '',
       },
     },
   };
