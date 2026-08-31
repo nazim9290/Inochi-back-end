@@ -153,8 +153,51 @@ const TOPIC_THEMES = [
       'Returning to Bangladesh after Japan: how Japanese experience is valued by employers at home',
       'Specified Skilled Worker in caregiving: tests, salary and the honest daily reality',
       'Changing from a student visa to a work visa in Japan: documents, timing and common refusals',
+      // EN: Briefs aimed at students still deciding WHETHER and WHERE to go
+      //     abroad — the questions they actually type before "Japan" is in
+      //     their head. Each answers the general question honestly and only
+      //     then shows where Japan fits, so the post earns the broad search
+      //     without reading as an advert.
+      // BN: যারা এখনো ঠিক করেনি বিদেশে যাবে কি না, গেলে কোথায় — "জাপান" মাথায়
+      //     আসার আগে তারা যা লেখে, সেই প্রশ্নগুলোর brief। প্রতিটা সাধারণ
+      //     প্রশ্নটার সৎ উত্তর দেয়, তারপরই জাপান কোথায় বসে দেখায় — তাই broad
+      //     search পায়, অথচ বিজ্ঞাপনের মতো পড়ে না।
+      'Study abroad from Bangladesh after HSC: the six real routes compared (Japan, Malaysia, Canada, UK, Australia, Germany) by cost, IELTS and work rights',
+      'Study abroad without IELTS: which countries and programmes genuinely accept Bangladeshi students, and what they ask for instead',
+      'How much does it really cost to study abroad from Bangladesh? A line-by-line budget for five countries',
+      'Can you study abroad with a low HSC GPA or a study gap? Honest options for Bangladeshi students',
+      'Part-time work while studying abroad: legal hours, typical pay and living costs country by country',
+      'Scholarships for Bangladeshi students abroad: the ones that actually pay out, and how early to apply',
+      'Study-abroad agency or apply yourself? What a consultancy should and should not charge for in Bangladesh',
+      'The student-visa interview: what embassies ask Bangladeshi applicants and the answers that fail',
+      'Study abroad for the whole family: which student visas let you bring a spouse, and what income they demand',
+      'Twelve months before you fly: a study-abroad checklist for a Bangladeshi HSC student and their parents',
     ],
   },
+];
+
+// EN: Words the "thinking about studying abroad" audience actually searches,
+//     in both scripts. Injected into every prompt so posts carry them
+//     naturally — this is the audience that has not chosen a country yet.
+// BN: "বিদেশে পড়াশোনা ভাবছি" — এই মানুষগুলো আসলে যা লিখে খোঁজে, দুই লিপিতে।
+//     প্রতিটা prompt-এ যায় যাতে post-এ স্বাভাবিকভাবে থাকে — এরাই সেই দল যারা
+//     এখনো দেশ ঠিক করেনি।
+const BROAD_INTENT_KEYWORDS = [
+  'study abroad from Bangladesh',
+  'higher study abroad after HSC',
+  'study abroad without IELTS',
+  'cheapest country to study abroad',
+  'study abroad cost from Bangladesh',
+  'student visa consultancy Bangladesh',
+  'scholarship for Bangladeshi students',
+  'study abroad with part-time job',
+  'বিদেশে উচ্চশিক্ষা',
+  'HSC-র পর বিদেশে পড়াশোনা',
+  'কম খরচে বিদেশে পড়াশোনা',
+  'IELTS ছাড়া বিদেশে পড়াশোনা',
+  'বিদেশে পড়াশোনার খরচ',
+  'স্টুডেন্ট ভিসা',
+  'বিদেশে স্কলারশিপ',
 ];
 
 // EN: Flattened views kept for backward compatibility with any seed importer
@@ -335,6 +378,14 @@ function buildUserPrompt({ topic, category, keywordsCsv, theme, avoidTitles, slo
   const kw = keywordsCsv
     ? `Weave these keywords naturally where relevant: ${keywordsCsv}.`
     : 'Pick 5–8 long-tail SEO keywords yourself appropriate for Bangladeshi students researching Japan study.';
+  // EN: Two or three broad study-abroad phrases per post, rotated by day so
+  //     the whole bank is covered across a fortnight without stuffing any one
+  //     article.
+  // BN: post-প্রতি দুই-তিনটা broad study-abroad phrase, দিন ধরে ঘোরে — কোনো
+  //     একটা লেখায় গাদাগাদি না করে দু'সপ্তাহে পুরো bank ঘুরে আসে।
+  const dayIdx = Math.floor(Date.now() / 86400000) + slotIndex;
+  const broad = [0, 1, 2].map((i) => BROAD_INTENT_KEYWORDS[(dayIdx * 3 + i) % BROAD_INTENT_KEYWORDS.length]);
+  const broadKw = `Also work in, naturally and at most once each, these broader study-abroad phrases (they are what students who have not yet chosen a country search for): ${broad.join('; ')}. Use the Bangla ones in the Bangla version and the English ones in the English version.`;
   const links = (GUIDE_LINKS[theme] || GUIDE_LINKS['study-in-japan']).join(', ');
   const avoid =
     Array.isArray(avoidTitles) && avoidTitles.length
@@ -348,6 +399,7 @@ function buildUserPrompt({ topic, category, keywordsCsv, theme, avoidTitles, slo
     THEME_ANGLE[theme] || '',
     `Category guideline: ${cat}.`,
     kw,
+    broadKw,
     `Relevant guide pages to link to (relative paths): ${links}.`,
     `Office to name in the closing paragraph: ${office.label} — its page is /branches/${office.slug}. Service page to link in the closing paragraph: ${service}.`,
     avoid,
