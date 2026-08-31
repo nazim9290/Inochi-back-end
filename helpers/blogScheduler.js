@@ -236,7 +236,7 @@ async function runOnce({ source = 'auto', slotIndex = 0 } = {}) {
   // BN: Generate, তারপর duplicate-title gate। Conflicting title বলে দিয়ে
   //     একবার retry; দ্বিতীয়বারও duplicate হলে run fail।
   const titles = await existingTitles().catch(() => []);
-  let ai = await callDeepSeek({ topic, category, keywordsCsv, theme });
+  let ai = await callDeepSeek({ topic, category, keywordsCsv, theme, slotIndex });
   let duplicateOf = null;
   for (let attempt = 0; attempt < 2 && ai.ok; attempt++) {
     const candidate = ai.doc.titleEn || ai.doc.title;
@@ -250,7 +250,7 @@ async function runOnce({ source = 'auto', slotIndex = 0 } = {}) {
       `[ai-blog] generated title "${candidate}" duplicates "${near.match}" (${near.score.toFixed(2)})`
     );
     if (attempt === 0) {
-      ai = await callDeepSeek({ topic, category, keywordsCsv, theme, avoidTitles: [near.match] });
+      ai = await callDeepSeek({ topic, category, keywordsCsv, theme, avoidTitles: [near.match], slotIndex });
     }
   }
 

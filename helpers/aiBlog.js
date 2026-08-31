@@ -262,9 +262,55 @@ function buildSystemPrompt() {
     'Always return a single valid JSON object — no Markdown fences, no commentary, no leading text.',
     'Every blog must include all three languages: Bangla (primary), English, and Japanese. Bangla and Japanese must be the article RE-WRITTEN NATIVELY in that language — same ideas, natural to a native reader — not a literal word-for-word translation.',
     'HTML content must be valid semantic HTML using <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>, <blockquote>, <a> only. No <script>, no inline styles, no <html>/<body> wrappers. Structure each article well: a short hook intro paragraph, then 3–5 <h2> sections (with <h3> sub-points where useful), at least one <ul> list, and a closing nudge with a soft call to action.',
-    'Embed 2–4 internal links naturally using relative paths from this list ONLY where genuinely relevant: the guide pages given in the user prompt, plus /eligibility, /scholarships, /jlpt-calendar, /universities, /pre-departure, /fees, /contact.',
+    'Embed 2–4 internal links naturally using relative paths from this list ONLY where genuinely relevant: the guide pages given in the user prompt, plus /eligibility, /scholarships, /jlpt-calendar, /universities, /pre-departure, /fees, /contact, the office page and the service page named in the user prompt.',
+    // EN: Every post must end by saying, in plain words, WHO wrote it, WHERE
+    //     they sit and WHAT they do — because search engines and AI answer
+    //     engines lift entity facts from article text, and a post that never
+    //     names the agency, an office or a service teaches them nothing about
+    //     Inochi. The office rotates per post (chosen in the user prompt) so
+    //     Dhaka, Narayanganj and Barishal each get named over time.
+    // BN: প্রতিটা post-এর শেষে সাদা কথায় বলতে হবে কে লিখল, কোথায় বসে, কী করে
+    //     — কারণ search engine আর AI answer engine লেখার ভেতর থেকেই entity-র
+    //     তথ্য তোলে; যে post-এ agency, office বা service-এর নামই নেই, সেটা
+    //     Inochi সম্পর্কে ওদের কিছু শেখায় না। Office post-প্রতি ঘোরে (user
+    //     prompt-এ বাছা হয়) — ঢাকা, নারায়ণগঞ্জ, বরিশাল সবাই পালা করে নাম পায়।
+    'CLOSING PARAGRAPH (mandatory, in all three languages, 2–3 sentences, natural not salesy): name "Inochi Global Education Institute" in full, mention the specific office given in the user prompt with its neighbourhood (linking its /branches/... page), and link the one service page given in the user prompt using natural anchor text that describes the service (never "click here"). Frame it as who is speaking, e.g. "I counsel students at our North Badda, Dhaka office…" — one honest offer of help, no superlatives like "best" or "No. 1".',
     'Aim for 800–1200 words in each language.',
   ].join(' ');
+}
+
+// EN: The three Bangladesh offices the closing paragraph rotates through,
+//     and the four service pages it may link. Kept in sync by hand with
+//     the frontend's BRANCHES / services routes — the backend cannot import
+//     them.
+// BN: Closing paragraph যে তিনটা বাংলাদেশ office-এ পালা করে ঘোরে, আর যে
+//     চারটা service page link করতে পারে। Frontend-এর BRANCHES / services
+//     route-এর সাথে হাতে মিলিয়ে রাখা — backend ওগুলো import করতে পারে না।
+const OFFICES_FOR_CLOSING = [
+  { slug: 'dhaka', label: 'Dhaka (North Badda, Pragati Sarani — 13 minutes from the Japan Embassy)' },
+  { slug: 'narayanganj', label: 'Narayanganj (Chashara, College Road)' },
+  { slug: 'barishal', label: 'Barishal (Nobogram Road, Muslim Para)' },
+];
+
+const SERVICE_FOR_THEME = {
+  'study-in-japan': ['/services/study-in-japan', '/services/visa-coe-support', '/services/language-training'],
+  'why-japan': ['/services/post-arrival', '/services/study-in-japan'],
+  'higher-study': ['/services/study-in-japan', '/services/visa-coe-support'],
+};
+
+// EN: Deterministic per day + slot, like themeForSlot, so the two daily
+//     posts name different offices and the rotation is even over a week.
+// BN: themeForSlot-এর মতো দিন + slot ধরে deterministic — দিনের দুটো post
+//     আলাদা office-এর নাম নেয়, আর সপ্তাহ জুড়ে সমান ভাগে ঘোরে।
+function officeForSlot(slotIndex = 0) {
+  const days = Math.floor(Date.now() / 86400000);
+  return OFFICES_FOR_CLOSING[(days + slotIndex) % OFFICES_FOR_CLOSING.length];
+}
+
+function serviceForSlot(theme, slotIndex = 0) {
+  const list = SERVICE_FOR_THEME[theme] || SERVICE_FOR_THEME['study-in-japan'];
+  const days = Math.floor(Date.now() / 86400000);
+  return list[(days + slotIndex) % list.length];
 }
 
 // EN: One-line angle guidance per editorial theme, injected into the user
@@ -280,8 +326,10 @@ const THEME_ANGLE = {
     'Angle: higher study abroad for Bangladeshi students, positioning Japan as a smart, affordable route versus other destinations. Talk money, timeline and career outcomes realistically.',
 };
 
-function buildUserPrompt({ topic, category, keywordsCsv, theme, avoidTitles }) {
+function buildUserPrompt({ topic, category, keywordsCsv, theme, avoidTitles, slotIndex = 0 }) {
   const themeDef = TOPIC_THEMES.find((t) => t.key === theme) || TOPIC_THEMES[0];
+  const office = officeForSlot(slotIndex);
+  const service = serviceForSlot(theme, slotIndex);
   const cat =
     category || `choose the single best fit for this topic from: ${themeDef.categories.join(', ')}`;
   const kw = keywordsCsv
@@ -301,6 +349,7 @@ function buildUserPrompt({ topic, category, keywordsCsv, theme, avoidTitles }) {
     `Category guideline: ${cat}.`,
     kw,
     `Relevant guide pages to link to (relative paths): ${links}.`,
+    `Office to name in the closing paragraph: ${office.label} — its page is /branches/${office.slug}. Service page to link in the closing paragraph: ${service}.`,
     avoid,
     'Return exactly this JSON shape (all strings, no nulls — use empty string if truly unknown):',
     JSON.stringify(
@@ -426,7 +475,7 @@ async function chat(messages, { temperature = 0.8, maxTokens = 8000 } = {}) {
  *     যেগুলো থেকে নতুন post আলাদা হতে হবে — scheduler-এর duplicate-title gate
  *     draft reject করার পর retry-তে ব্যবহার।
  */
-async function callDeepSeek({ topic, category, keywordsCsv, theme, avoidTitles }) {
+async function callDeepSeek({ topic, category, keywordsCsv, theme, avoidTitles, slotIndex = 0 }) {
   // EN: 0.8 adds a little more variety in phrasing across days. max_tokens
   //     8000 — three 800–1200 word articles + JSON overflowed 4000 and
   //     truncated the response, which broke JSON.parse.
@@ -437,7 +486,7 @@ async function callDeepSeek({ topic, category, keywordsCsv, theme, avoidTitles }
       { role: 'system', content: buildSystemPrompt() },
       {
         role: 'user',
-        content: buildUserPrompt({ topic, category, keywordsCsv, theme, avoidTitles }),
+        content: buildUserPrompt({ topic, category, keywordsCsv, theme, avoidTitles, slotIndex }),
       },
     ],
     { temperature: 0.8, maxTokens: 8000 }
