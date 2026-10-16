@@ -299,12 +299,21 @@ function buildSystemPrompt() {
     'You are a senior education counsellor at Inochi Global Education Institute, a Bangladesh-based agency that helps students go to Japan to study. You have personally lived in Japan and guided hundreds of Bangladeshi students, so you write from real experience — not generic web copy.',
     'Target audience: Bangladeshi students (HSC / undergrad age) and their parents who are considering studying in Japan.',
     'Voice: warm, human and specific — like an experienced mentor talking to one student over tea. Use first person ("I often tell students…") and second person ("you\'ll notice…"). In English use natural contractions (you\'ll, it\'s, don\'t). In Bangla write the way an educated Bangladeshi mentor actually speaks — natural and conversational, with comfortable everyday loanwords (ভিসা, পার্টটাইম, ক্লাস) — NOT stiff translation-Bangla or over-Sanskritised words.',
-    'Make it READ HUMAN, not AI: vary sentence length (mix short punchy lines with longer ones), open with a hook (a real scene, a surprising fact, or a direct question) instead of a dictionary definition, and include at least one concrete mini-anecdote or scenario with real specifics (yen amounts, ward / city names, train lines, school names, JLPT levels). Give at least one honest trade-off or caution — never make everything sound perfect.',
+    'Make it READ HUMAN, not AI: vary sentence length (mix short punchy lines with longer ones) and use real specifics (yen amounts, ward / city names, train lines, school names, JLPT levels). Weave at least one honest caution into the body — never make everything sound perfect — but do NOT give it its own section titled "An honest trade-off" / "An honest caution".',
+    // EN: Every post used to open with the same scene ("Last year a student
+    //     walked into my office… 'Sir, …'") and end with the same "What you
+    //     can do this week" section — the per-post ARTICLE FORMAT in the user
+    //     prompt now decides the opening and the structure instead.
+    // BN: আগে প্রতিটা post একই দৃশ্য দিয়ে শুরু হত ("গত বছর এক student আমার
+    //     অফিসে এল… 'Sir, …'") আর একই "What you can do this week" section-এ
+    //     শেষ হত — এখন user prompt-এর post-প্রতি ARTICLE FORMAT-ই শুরু আর
+    //     কাঠামো ঠিক করে।
+    'Follow the ARTICLE FORMAT given in the user prompt exactly — it decides how the article opens and how it is structured. NEVER open with a student or parent visiting / calling / messaging the office, and never use the address "Sir". Do not reuse the stock section headings "What you can do this week", "An honest trade-off", "An honest word" or "Why Japan is worth it". A personal anecdote is optional, at most one short one, and never in the first paragraph unless the format asks for a story.',
     'BANNED phrases — never use any of these: "In today\'s fast-paced world", "In conclusion", "Moreover", "Furthermore", "It is important to note", "delve", "tapestry", "navigate the complexities", "embark on a journey", "unlock", "in the realm of", "ever-evolving". End with a warm, practical nudge — not a summary paragraph.',
     'Be factually accurate and current. If a number can shift (fees, exchange rates, visa rules), say it is approximate and tell the reader to confirm. Never invent fake statistics, fake named student quotes, or fake scholarship guarantees.',
     'Always return a single valid JSON object — no Markdown fences, no commentary, no leading text.',
     'Every blog must include all three languages: Bangla (primary), English, and Japanese. Bangla and Japanese must be the article RE-WRITTEN NATIVELY in that language — same ideas, natural to a native reader — not a literal word-for-word translation.',
-    'HTML content must be valid semantic HTML using <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>, <blockquote>, <a> only. No <script>, no inline styles, no <html>/<body> wrappers. Structure each article well: a short hook intro paragraph, then 3–5 <h2> sections (with <h3> sub-points where useful), at least one <ul> list, and a closing nudge with a soft call to action.',
+    'HTML content must be valid semantic HTML using <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <blockquote>, <a> only. No <script>, no inline styles, no <html>/<body> wrappers. Use the structure the ARTICLE FORMAT describes, with <h2> section headings written specifically for this topic (never generic headings), and end with the closing paragraph below.',
     'Embed 2–4 internal links naturally using relative paths from this list ONLY where genuinely relevant: the guide pages given in the user prompt, plus /eligibility, /scholarships, /jlpt-calendar, /universities, /pre-departure, /fees, /contact, the office page and the service page named in the user prompt.',
     // EN: Every post must end by saying, in plain words, WHO wrote it, WHERE
     //     they sit and WHAT they do — because search engines and AI answer
@@ -330,13 +339,20 @@ function buildSystemPrompt() {
 //     চারটা service page link করতে পারে। Frontend-এর BRANCHES / services
 //     route-এর সাথে হাতে মিলিয়ে রাখা — backend ওগুলো import করতে পারে না।
 const OFFICES_FOR_CLOSING = [
-  { slug: 'dhaka', label: 'Dhaka (North Badda, Pragati Sarani — 13 minutes from the Japan Embassy)' },
+  {
+    slug: 'dhaka',
+    label: 'Dhaka (North Badda, Pragati Sarani — 13 minutes from the Japan Embassy)',
+  },
   { slug: 'narayanganj', label: 'Narayanganj (Chashara, College Road)' },
   { slug: 'barishal', label: 'Barishal (Nobogram Road, Muslim Para)' },
 ];
 
 const SERVICE_FOR_THEME = {
-  'study-in-japan': ['/services/study-in-japan', '/services/visa-coe-support', '/services/language-training'],
+  'study-in-japan': [
+    '/services/study-in-japan',
+    '/services/visa-coe-support',
+    '/services/language-training',
+  ],
   'why-japan': ['/services/post-arrival', '/services/study-in-japan'],
   'higher-study': ['/services/study-in-japan', '/services/visa-coe-support'],
 };
@@ -369,7 +385,36 @@ const THEME_ANGLE = {
     'Angle: higher study abroad for Bangladeshi students, positioning Japan as a smart, affordable route versus other destinations. Talk money, timeline and career outcomes realistically.',
 };
 
-function buildUserPrompt({ topic, category, keywordsCsv, theme, avoidTitles, slotIndex = 0 }) {
+// EN: One format per post, rotated by day, so consecutive posts read
+//     differently: different opening move, different skeleton. Each entry
+//     is a prompt instruction, not a template.
+// BN: post-প্রতি একটা format, দিন ধরে ঘোরে — পরপর দুটো post আলাদা পড়ায়:
+//     আলাদা শুরু, আলাদা কাঠামো। প্রতিটা entry prompt-এর নির্দেশ, template নয়।
+const ARTICLE_FORMATS = [
+  'STEP-BY-STEP GUIDE — open with a 2-sentence direct answer to the question the title asks (no story). Then a numbered <ol> of the steps, each step an <h3> with what to do, what it costs and how long it takes.',
+  'FAQ — open with one short paragraph saying who this is for. Then 6–8 real questions students ask, each as an <h3> phrased exactly as a student would type it into Google, each answered in 2–4 sentences.',
+  'MYTH vs FACT — open by stating the single most common myth about this topic in bold, then correct it. Then 4–5 more myths, each an <h2> "Myth: …" followed by the fact and the evidence.',
+  'NUMBERS BREAKDOWN — open with the one headline number the reader most wants (a cost, a duration, a score) in the first sentence. Then break it down section by section with yen and taka figures, and say what makes it go up or down.',
+  'MISTAKES TO AVOID — open with the single costliest mistake and what it cost someone (no office scene). Then 5–7 mistakes, each an <h2>, saying why it happens and how to avoid it.',
+  'MONTH-BY-MONTH TIMELINE — open with the deadline that matters most. Then a timeline: each <h2> is a month or phase, listing what must be done in it and what happens if it slips.',
+  'DAY-IN-THE-LIFE STORY — written in second person ("you"), set in Japan, not in an office. Open in the middle of a concrete moment (a train platform, a konbini shift, a classroom). Weave the practical facts into the story, with <h2> breaks for each part of the day or journey.',
+  'SIDE-BY-SIDE COMPARISON — open with a one-paragraph verdict ("choose A if…, choose B if…"). Then compare the options criterion by criterion (cost, time, difficulty, future options), one <h2> per criterion.',
+];
+
+function formatForSlot(slotIndex = 0) {
+  const days = Math.floor(Date.now() / 86400000);
+  return ARTICLE_FORMATS[(days + slotIndex) % ARTICLE_FORMATS.length];
+}
+
+function buildUserPrompt({
+  topic,
+  category,
+  keywordsCsv,
+  theme,
+  avoidTitles,
+  recentOpenings,
+  slotIndex = 0,
+}) {
   const themeDef = TOPIC_THEMES.find((t) => t.key === theme) || TOPIC_THEMES[0];
   const office = officeForSlot(slotIndex);
   const service = serviceForSlot(theme, slotIndex);
@@ -384,7 +429,9 @@ function buildUserPrompt({ topic, category, keywordsCsv, theme, avoidTitles, slo
   // BN: post-প্রতি দুই-তিনটা broad study-abroad phrase, দিন ধরে ঘোরে — কোনো
   //     একটা লেখায় গাদাগাদি না করে দু'সপ্তাহে পুরো bank ঘুরে আসে।
   const dayIdx = Math.floor(Date.now() / 86400000) + slotIndex;
-  const broad = [0, 1, 2].map((i) => BROAD_INTENT_KEYWORDS[(dayIdx * 3 + i) % BROAD_INTENT_KEYWORDS.length]);
+  const broad = [0, 1, 2].map(
+    (i) => BROAD_INTENT_KEYWORDS[(dayIdx * 3 + i) % BROAD_INTENT_KEYWORDS.length]
+  );
   const broadKw = `Also work in, naturally and at most once each, these broader study-abroad phrases (they are what students who have not yet chosen a country search for): ${broad.join('; ')}. Use the Bangla ones in the Bangla version and the English ones in the English version.`;
   const links = (GUIDE_LINKS[theme] || GUIDE_LINKS['study-in-japan']).join(', ');
   const avoid =
@@ -394,9 +441,22 @@ function buildUserPrompt({ topic, category, keywordsCsv, theme, avoidTitles, slo
           .map((t) => `"${t}"`)
           .join('; ')}.`
       : '';
+  // EN: The first lines of our latest posts — so the model sees exactly
+  //     which openings are already worn out.
+  // BN: সাম্প্রতিক post-গুলোর প্রথম লাইন — model যেন দেখে কোন শুরু আগেই
+  //     বহুবার হয়ে গেছে।
+  const openings =
+    Array.isArray(recentOpenings) && recentOpenings.length
+      ? `Our latest posts opened like this — your opening must be completely different in form and content from every one of them:\n${recentOpenings
+          .slice(0, 8)
+          .map((o) => `- "${o}"`)
+          .join('\n')}`
+      : '';
   return [
     `Topic brief: ${topic}.`,
     THEME_ANGLE[theme] || '',
+    `ARTICLE FORMAT for this post: ${formatForSlot(slotIndex)}`,
+    openings,
     `Category guideline: ${cat}.`,
     kw,
     broadKw,
@@ -423,7 +483,14 @@ function buildUserPrompt({ topic, category, keywordsCsv, theme, avoidTitles, slo
         //     visuals (people / places / objects) that match the post's mood.
         // BN: cover image search-এর জন্য ২-৪টা সংক্ষিপ্ত English keyword —
         //     post-এর mood-এর সাথে মিল রেখে concrete visual।
-        imageQuery: 'tokyo students study',
+        // EN: Was the literal example 'tokyo students study' — the model
+        //     copied it into almost every post, so every cover was the same
+        //     photo. Keep this a description, never a sample value.
+        // BN: আগে এখানে হুবহু 'tokyo students study' ছিল — model প্রায় প্রতিটা
+        //     post-এ সেটাই কপি করত, ফলে সব cover একই ছবি। এটা বর্ণনা থাকবে,
+        //     কখনো নমুনা মান নয়।
+        imageQuery:
+          '2–4 English words naming ONE concrete, photographable subject specific to THIS article (a place, object or scene, e.g. a landmark, food, document, season, vehicle). Never generic words like students, study, university, education.',
         tags: { blogs: true, study: false, service: false },
       },
       null,
@@ -542,7 +609,10 @@ async function chat(messages, { effort = 'medium', maxTokens = 16000 } = {}) {
       return { ok: false, error: `Anthropic stopped early: ${json.stop_reason}` };
     }
     const text = Array.isArray(json?.content)
-      ? json.content.filter((b) => b.type === 'text').map((b) => b.text).join('')
+      ? json.content
+          .filter((b) => b.type === 'text')
+          .map((b) => b.text)
+          .join('')
       : '';
     return { ok: true, text };
   } catch (err) {
@@ -558,7 +628,15 @@ async function chat(messages, { effort = 'medium', maxTokens = 16000 } = {}) {
  *     যেগুলো থেকে নতুন post আলাদা হতে হবে — scheduler-এর duplicate-title gate
  *     draft reject করার পর retry-তে ব্যবহার।
  */
-async function generateArticle({ topic, category, keywordsCsv, theme, avoidTitles, slotIndex = 0 }) {
+async function generateArticle({
+  topic,
+  category,
+  keywordsCsv,
+  theme,
+  avoidTitles,
+  recentOpenings,
+  slotIndex = 0,
+}) {
   // EN: max_tokens 16000 — three 800–1200 word articles + JSON need ~8000,
   //     and thinking tokens come out of the same budget.
   // BN: max_tokens 16000 — তিনটি 800–1200 শব্দের লেখা + JSON-এ ~8000 লাগে,
@@ -568,7 +646,15 @@ async function generateArticle({ topic, category, keywordsCsv, theme, avoidTitle
       { role: 'system', content: buildSystemPrompt() },
       {
         role: 'user',
-        content: buildUserPrompt({ topic, category, keywordsCsv, theme, avoidTitles, slotIndex }),
+        content: buildUserPrompt({
+          topic,
+          category,
+          keywordsCsv,
+          theme,
+          avoidTitles,
+          recentOpenings,
+          slotIndex,
+        }),
       },
     ],
     { effort: 'medium', maxTokens: 16000 }
@@ -590,10 +676,56 @@ async function generateArticle({ topic, category, keywordsCsv, theme, avoidTitle
  *     pool শেষ হলে ব্যবহার। Caller isNearDuplicate দিয়ে আবার যাচাই করে —
  *     model-এর প্রতিশ্রুতিতে ভরসা নেই।
  */
+// EN: Subject areas the blog has barely touched. Three random ones are
+//     suggested per proposal so the model stops circling back to JLPT /
+//     visa / intake, which it did when left to pick freely.
+// BN: যে বিষয়গুলোতে blog প্রায় লেখেইনি। প্রতি প্রস্তাবে random তিনটা সাজেস্ট
+//     করা হয়, যাতে model বারবার JLPT / ভিসা / intake-এ ফিরে না যায় — নিজে
+//     বাছতে দিলে সেটাই করছিল।
+const SUBJECT_AREAS = [
+  'food and halal eating in Japan',
+  'renting an apartment and guarantors',
+  'opening a bank account and sending money home',
+  'health insurance and seeing a doctor',
+  'phone SIM and internet',
+  'ward office registration and My Number card',
+  'a specific smaller city (Fukuoka, Sendai, Nagoya, Hiroshima, Sapporo, Kobe)',
+  'named scholarships (MEXT, JASSO, school-specific)',
+  'vocational schools (senmon gakko) and specific fields',
+  'IT and engineering careers in Japan',
+  'nursing and caregiving careers',
+  'hospitality and tourism careers',
+  'Japanese workplace culture and job interviews',
+  'job hunting (shukatsu) after graduation',
+  'parents’ questions: safety, cost, staying in touch',
+  'religion, prayer spaces and Ramadan in Japan',
+  'earthquakes and disaster preparedness',
+  'public transport passes and getting around',
+  'friendship, loneliness and mental health abroad',
+  'Japanese etiquette and everyday rules',
+  'studying Japanese at home in Bangladesh (apps, books, methods)',
+  'university entrance (EJU) and graduate school',
+  'tax, pension and residence card renewal',
+  'bringing a spouse or family to Japan',
+];
+
+function randomAreas(n = 3) {
+  const a = [...SUBJECT_AREAS];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a.slice(0, n);
+}
+
 async function proposeTopic({ themeKey, covered = [], excludeHint = '' }) {
   const theme = TOPIC_THEMES.find((t) => t.key === themeKey) || TOPIC_THEMES[0];
+  // EN: The FULL ledger (was the last 150 of an unordered list, so the
+  //     model never saw most of what exists and kept re-proposing it).
+  // BN: পুরো ledger (আগে unordered list-এর শেষ ১৫০টা যেত, তাই model বেশিরভাগ
+  //     বিদ্যমান লেখা দেখতই না আর সেগুলোই আবার প্রস্তাব করত)।
   const coveredList = covered
-    .slice(-150)
+    .slice(0, 800)
     .map((t) => `- ${t}`)
     .join('\n');
   const messages = [
@@ -608,6 +740,7 @@ async function proposeTopic({ themeKey, covered = [], excludeHint = '' }) {
         `Theme: ${theme.label} (${theme.key}). ${THEME_ANGLE[theme.key] || ''}`,
         `Category options: ${theme.categories.join('; ')}.`,
         'Propose ONE new, specific, search-worthy blog topic for this theme that a Bangladeshi student would actually google — concrete (a named exam, a city, a visa step, a cost, a season, a job type, a mistake), not a vague overview.',
+        `Prefer a topic within one of these under-covered areas: ${randomAreas().join('; ')}.`,
         `It must NOT be a rephrase, subset or superset of ANY topic already covered below. Pick a genuinely different subject.${excludeHint ? ` ${excludeHint}` : ''}`,
         'Already covered:',
         coveredList || '- (none yet)',
@@ -632,7 +765,48 @@ async function proposeTopic({ themeKey, covered = [], excludeHint = '' }) {
   };
 }
 
+/**
+ * EN: Ask Claude whether `topic` covers the same subject as any recent post.
+ *     Word overlap misses rephrasings ("Japan Weather… What to Pack" vs
+ *     "Japan's Four Seasons on a Student Budget" scored 0.08), so this is
+ *     the meaning-level check for AI-proposed topics. Fails open: on an API
+ *     error the topic is allowed rather than blocking the day's post.
+ * BN: Claude-কে জিজ্ঞেস করে `topic` সাম্প্রতিক কোনো post-এর একই বিষয় কিনা।
+ *     শব্দ-মিল rephrase ধরে না ("Japan Weather… What to Pack" বনাম "Japan's
+ *     Four Seasons on a Student Budget" = 0.08), তাই AI-প্রস্তাবিত topic-এর
+ *     অর্থ-ভিত্তিক যাচাই এটা। API error হলে topic আটকায় না — দিনের post
+ *     বন্ধ হওয়ার চেয়ে সেটা ভালো।
+ */
+async function isSameSubject({ topic, recentTitles = [] }) {
+  if (!recentTitles.length) return { duplicate: false };
+  const r = await chat(
+    [
+      {
+        role: 'system',
+        content:
+          'You check a blog topic plan for repetition. Two topics are the SAME SUBJECT when a reader who read one would find the other mostly repeats it (same question answered, e.g. two posts on Japan seasons / what to pack, or two on April vs October intake), even if the wording or angle differs. Return only a JSON object.',
+      },
+      {
+        role: 'user',
+        content: [
+          `New topic: ${topic}`,
+          'Existing posts:',
+          recentTitles.map((t) => `- ${t}`).join('\n'),
+          'Return exactly: {"duplicate": true or false, "of": "the existing title it repeats, or empty string"}',
+        ].join('\n\n'),
+      },
+    ],
+    { effort: 'low', maxTokens: 4000 }
+  );
+  if (!r.ok) return { duplicate: false, error: r.error };
+  const doc = extractJsonObject(r.text);
+  return { duplicate: doc?.duplicate === true, of: String(doc?.of || '') };
+}
+
 module.exports = {
+  ARTICLE_FORMATS,
+  formatForSlot,
+  isSameSubject,
   TOPIC_THEMES,
   CATEGORY_POOL,
   TOPIC_FALLBACK_POOL,

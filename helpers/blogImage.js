@@ -48,10 +48,32 @@ const USER_AGENT =
 // BN: brand-safe generic fallback search — AI-র নিজের query-তে usable কিছু না
 //     পেলে ক্রমে try হয়, যাতে কোনো পোস্ট image ছাড়া না থাকে।
 const FALLBACK_QUERIES = [
-  'Japan university students',
-  'Tokyo Japan cityscape',
-  'Japan study abroad',
+  'Japan university campus',
+  'Tokyo cityscape',
+  'Kyoto street',
+  'Osaka skyline',
+  'Japanese train station',
+  'Shinkansen',
+  'Japanese garden',
+  'Mount Fuji',
+  'Japanese classroom',
+  'Japanese temple',
+  'Japan autumn leaves',
+  'Japan cherry blossom',
 ];
+
+// EN: Shuffled copy so the fallback chain doesn't always land on the same
+//     first query (and therefore the same photo).
+// BN: Shuffle করা copy — fallback chain যেন সবসময় একই প্রথম query (আর তাই
+//     একই ছবি)-তে না পড়ে।
+function shuffled(list) {
+  const a = [...list];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 // EN: Strip HTML + collapse whitespace from Commons extmetadata fields
 //     (Artist/License often arrive as small HTML snippets).
@@ -77,6 +99,13 @@ function cleanQuery(raw) {
     .slice(0, 120);
 }
 
+// EN: Year a photo was taken, from Commons metadata; null if unknown.
+// BN: Commons metadata থেকে ছবি তোলার বছর; জানা না থাকলে null।
+function photoYear(meta) {
+  const m = stripHtml(meta.DateTimeOriginal?.value).match(/\b(1[89]\d\d|20\d\d)\b/);
+  return m ? Number(m[1]) : null;
+}
+
 // EN: Search Commons (File namespace) for a usable photo matching `query`.
 //     Returns {thumbUrl, descriptionUrl, artist, license} or null. We only
 //     accept real raster photos (jpeg/png) at least 800px wide and ask the
@@ -85,7 +114,7 @@ function cleanQuery(raw) {
 //     Returns {thumbUrl, descriptionUrl, artist, license} বা null। শুধু আসল
 //     raster photo (jpeg/png) ≥800px চওড়া নিই, আর API থেকে 1200px-চওড়া
 //     thumbnail চাই যাতে download ছোট থাকে।
-async function searchCommonsImage(query) {
+async function searchCommonsImage(query, exclude = new Set()) {
   const q = cleanQuery(query);
   if (!q) return null;
   const params = new URLSearchParams({
@@ -120,14 +149,24 @@ async function searchCommonsImage(query) {
   // EN: Preserve search-relevance order via each page's `index`.
   // BN: প্রতি page-এর `index` দিয়ে search-relevance order রাখি।
   const ranked = Object.values(pages).sort((a, b) => (a.index || 0) - (b.index || 0));
+  const eligible = [];
   for (const page of ranked) {
     const ii = page.imageinfo && page.imageinfo[0];
     if (!ii) continue;
     if (!/^image\/(jpeg|png)$/.test(ii.mime || '')) continue; // photos only, no SVG/GIF
     if ((ii.width || 0) < 800) continue; // big enough for a hero
+    if ((ii.height || 0) > (ii.width || 0)) continue; // landscape only — portraits crop badly as covers
     const thumbUrl = ii.thumburl || ii.url;
     if (!thumbUrl) continue;
     const meta = ii.extmetadata || {};
+    // EN: Skip archive photos (an 1882 Waseda class photo became a sakura cover).
+    // BN: পুরোনো archive ছবি বাদ (১৮৮২-র Waseda class photo sakura cover হয়েছিল)।
+    const year = photoYear(meta);
+    if (year && year < 1990) continue;
+    const descriptionUrl =
+      ii.descriptionurl ||
+      `https://commons.wikimedia.org/wiki/${encodeURIComponent(page.title || '')}`;
+    if (exclude.has(descriptionUrl)) continue; // already the cover of another post
     const license =
       stripHtml(meta.LicenseShortName?.value) || stripHtml(meta.License?.value) || 'see source';
     // EN: The licence URL, not only its short name. "CC BY-SA 4.0" as bare
@@ -139,17 +178,19 @@ async function searchCommonsImage(query) {
     //     পাঠককে নিজে খুঁজতে হয়; URL-ই কৃতজ্ঞতার স্বীকারকে সম্পূর্ণ করে।
     //     Commons সবসময় দেয় না — না থাকলে নামটি সাদা লেখাতেই দেখায়।
     const licenseUrl = stripHtml(meta.LicenseUrl?.value);
-    return {
+    eligible.push({
       thumbUrl,
-      descriptionUrl:
-        ii.descriptionurl ||
-        `https://commons.wikimedia.org/wiki/${encodeURIComponent(page.title || '')}`,
+      descriptionUrl,
       artist: stripHtml(meta.Artist?.value),
       license,
       licenseUrl,
-    };
+    });
+    if (eligible.length >= 5) break;
   }
-  return null;
+  // EN: Random pick among the top few relevant matches, not always #1.
+  // BN: সবসময় #1 নয় — সবচেয়ে প্রাসঙ্গিক কয়েকটার মধ্যে random।
+  if (!eligible.length) return null;
+  return eligible[Math.floor(Math.random() * eligible.length)];
 }
 
 // EN: Download image bytes (with the required UA). 45 s abort cap.
@@ -158,7 +199,10 @@ async function fetchImageBuffer(url, timeoutMs = 45 * 1000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal: controller.signal });
+    const res = await fetch(url, {
+      headers: { 'User-Agent': USER_AGENT },
+      signal: controller.signal,
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return Buffer.from(await res.arrayBuffer());
   } finally {
@@ -198,7 +242,7 @@ function uploadToCloudinary(buffer, publicId) {
  *     AI-র সংক্ষিপ্ত English image keyword; `seedSource` (topic) generic
  *     fallback-এর আগে secondary search term হিসেবে ব্যবহৃত।
  */
-async function generateCoverImage(rawQuery, seedSource) {
+async function generateCoverImage(rawQuery, seedSource, { exclude = new Set() } = {}) {
   if (
     !process.env.CLOUDINARY_CLOUD_NAME ||
     !process.env.CLOUDINARY_API_KEY ||
@@ -209,12 +253,12 @@ async function generateCoverImage(rawQuery, seedSource) {
 
   // EN: Try the AI keywords, then the topic, then brand-safe generics.
   // BN: আগে AI keyword, তারপর topic, তারপর brand-safe generic।
-  const queries = [rawQuery, seedSource, ...FALLBACK_QUERIES].filter(Boolean);
+  const queries = [rawQuery, seedSource, ...shuffled(FALLBACK_QUERIES)].filter(Boolean);
   let found = null;
   let lastError = 'no Commons match found';
   for (const q of queries) {
     try {
-      found = await searchCommonsImage(q);
+      found = await searchCommonsImage(q, exclude);
       if (found) break;
     } catch (err) {
       lastError = `Commons search failed: ${err.message || err}`;

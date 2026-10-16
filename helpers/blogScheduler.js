@@ -44,6 +44,7 @@ const {
   generateArticle,
   pickFallbackTopic,
   proposeTopic,
+  isSameSubject,
   themeForSlot,
   makeSlug,
   isNearDuplicate,
@@ -143,6 +144,41 @@ async function coveredTopics() {
 // BN: শুধু বিদ্যমান blog title (EN আগে, নইলে Bangla) — post-generation title
 //     gate-এ ব্যবহার। Brief ইচ্ছা করেই বাদ: generated title নিজের brief-এর
 //     কাছাকাছি হওয়াই স্বাভাবিক।
+// EN: Title + opening line of the newest AI posts (newest first). Titles
+//     feed the meaning-level duplicate check, openings the "don't open like
+//     these" list.
+// BN: সবচেয়ে নতুন AI post-গুলোর title + প্রথম লাইন (নতুনটা আগে)। Title যায়
+//     অর্থ-ভিত্তিক duplicate যাচাইয়ে, প্রথম লাইন "এভাবে শুরু কোরো না" list-এ।
+async function recentPostSamples(limit = 8) {
+  const rows = await Blog.findAll({
+    attributes: ['titleEn', 'title', 'contentEn'],
+    where: { aiGeneratedAt: { [Op.ne]: null } },
+    order: [['createdAt', 'DESC']],
+    limit,
+    raw: true,
+  });
+  return rows.map((b) => {
+    const text = String(b.contentEn || '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return { title: b.titleEn || b.title || '', opening: text.slice(0, 160) };
+  });
+}
+
+// EN: Commons pages already used as a cover on any post, so the same photo
+//     is never picked twice.
+// BN: যে Commons ছবি আগেই কোনো post-এর cover, সেগুলো — একই ছবি যেন দু'বার না আসে।
+async function usedImageSources() {
+  const rows = await Blog.findAll({ attributes: ['image'], raw: true });
+  const set = new Set();
+  for (const r of rows) {
+    const link = r.image && r.image.credit && r.image.credit.sourceLink;
+    if (link) set.add(String(link));
+  }
+  return set;
+}
+
 async function existingTitles() {
   const blogs = await Blog.findAll({ attributes: ['title', 'titleEn'], raw: true });
   return blogs.map((b) => b.titleEn || b.title).filter(Boolean);
@@ -156,7 +192,7 @@ async function existingTitles() {
  *     queueRow } দেয়, বা null — unique topic না পেলে (caller failed run
  *     record করে)।
  */
-async function selectTopic({ slotIndex = 0, covered }) {
+async function selectTopic({ slotIndex = 0, covered, recentTitles = [] }) {
   // EN: 1) admin queue — always first, even for manual triggers.
   // BN: ১) admin queue — manual trigger-এও সবসময় আগে।
   const queueRow = await BlogTopicQueue.findOne({
@@ -184,19 +220,29 @@ async function selectTopic({ slotIndex = 0, covered }) {
   // BN: ৩) pool শেষ → Claude-কে নতুন brief দিতে বলি, নিজেরা ledger-এর সাথে
   //     যাচাই করি, model rephrase করলে hint দিয়ে retry।
   const themeKey = themeForSlot(slotIndex).key;
+  // EN: Every rejected proposal is listed back to the model, so retries
+  //     don't bounce between the same two or three ideas.
+  // BN: বাতিল হওয়া প্রতিটা প্রস্তাব model-কে ফিরিয়ে বলা হয়, যাতে retry একই
+  //     দু-তিনটা idea-র মধ্যে ঘুরপাক না খায়।
+  const rejected = [];
   let excludeHint = '';
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 5; attempt++) {
     const p = await proposeTopic({ themeKey, covered, excludeHint });
     if (!p.ok) {
       console.log('[ai-blog] proposeTopic failed:', p.error);
       break;
     }
-    if (!isNearDuplicate(p.topic, covered)) {
-      return { ...p, source: 'ai-topic', queueRow: null };
+    let near = null;
+    if (isNearDuplicate(p.topic, covered)) {
+      near = nearestMatch(p.topic, covered).match;
+    } else {
+      const same = await isSameSubject({ topic: p.topic, recentTitles });
+      if (!same.duplicate) return { ...p, source: 'ai-topic', queueRow: null };
+      near = same.of || 'a recent post';
     }
-    const near = nearestMatch(p.topic, covered).match;
     console.log(`[ai-blog] proposed topic too close to existing ("${near}") — retrying`);
-    excludeHint = `Your previous proposal "${p.topic}" was too similar to "${near}". Choose a completely different subject.`;
+    rejected.push(`"${p.topic}" (repeats "${near}")`);
+    excludeHint = `These proposals were rejected as repeats: ${rejected.join('; ')}. Choose a completely different subject area.`;
   }
   return null;
 }
@@ -214,7 +260,17 @@ async function runOnce({ source = 'auto', slotIndex = 0 } = {}) {
   const startedAt = Date.now();
   const covered = await coveredTopics().catch(() => []);
 
-  const pick = await selectTopic({ slotIndex, covered });
+  // EN: Last 60 titles for the meaning-level duplicate check — two months
+  //     of daily posts without a huge prompt.
+  // BN: অর্থ-ভিত্তিক duplicate যাচাইয়ে শেষ ৬০টা title — দৈনিক post-এর দুই
+  //     মাস, prompt-ও বিশাল হয় না।
+  const recent = await recentPostSamples(60).catch(() => []);
+  const recentTitles = recent.map((r) => r.title).filter(Boolean);
+  const recentOpenings = recent
+    .slice(0, 8)
+    .map((r) => r.opening)
+    .filter(Boolean);
+  const pick = await selectTopic({ slotIndex, covered, recentTitles });
   if (!pick) {
     const err =
       'No unique topic available (pool exhausted and AI proposals duplicated existing posts)';
@@ -236,7 +292,14 @@ async function runOnce({ source = 'auto', slotIndex = 0 } = {}) {
   // BN: Generate, তারপর duplicate-title gate। Conflicting title বলে দিয়ে
   //     একবার retry; দ্বিতীয়বারও duplicate হলে run fail।
   const titles = await existingTitles().catch(() => []);
-  let ai = await generateArticle({ topic, category, keywordsCsv, theme, slotIndex });
+  let ai = await generateArticle({
+    topic,
+    category,
+    keywordsCsv,
+    theme,
+    recentOpenings,
+    slotIndex,
+  });
   let duplicateOf = null;
   for (let attempt = 0; attempt < 2 && ai.ok; attempt++) {
     const candidate = ai.doc.titleEn || ai.doc.title;
@@ -250,7 +313,15 @@ async function runOnce({ source = 'auto', slotIndex = 0 } = {}) {
       `[ai-blog] generated title "${candidate}" duplicates "${near.match}" (${near.score.toFixed(2)})`
     );
     if (attempt === 0) {
-      ai = await generateArticle({ topic, category, keywordsCsv, theme, avoidTitles: [near.match], slotIndex });
+      ai = await generateArticle({
+        topic,
+        category,
+        keywordsCsv,
+        theme,
+        avoidTitles: [near.match],
+        recentOpenings,
+        slotIndex,
+      });
     }
   }
 
@@ -303,7 +374,8 @@ async function runOnce({ source = 'auto', slotIndex = 0 } = {}) {
   //     silent: post image=null দিয়েই publish হয়।
   let imageMeta = null;
   try {
-    const imgRes = await generateCoverImage(ai.doc.imageQuery || topic, ai.doc.imageQuery || topic);
+    const exclude = await usedImageSources().catch(() => new Set());
+    const imgRes = await generateCoverImage(ai.doc.imageQuery || topic, topic, { exclude });
     if (imgRes.ok) {
       imageMeta = imgRes.photo;
       console.log('[ai-blog] cover image generated:', imageMeta.url);
@@ -461,6 +533,8 @@ module.exports = {
   selectTopic,
   coveredTopics,
   existingTitles,
+  recentPostSamples,
+  usedImageSources,
   successfulRunsToday,
   recentTopics,
   getPerDay,
