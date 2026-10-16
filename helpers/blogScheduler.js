@@ -4,11 +4,11 @@
  *       1. Choose a topic that has NEVER been published:
  *            a. oldest pending BlogTopicQueue row (admin-curated), else
  *            b. a never-used brief from the built-in pool, else
- *            c. a brand-new brief proposed by DeepSeek.
+ *            c. a brand-new brief proposed by Claude.
  *          Every candidate is checked against the permanent ledger (all
  *          successful run briefs + all blog titles) with the similarity
  *          rule in helpers/blogSimilarity.js.
- *       2. Call DeepSeek to generate a trilingual post.
+ *       2. Call Claude to generate a trilingual post.
  *       3. Duplicate-title gate: if the generated title is a near-duplicate
  *          of an existing post, regenerate once with the conflicting titles
  *          listed; if still a duplicate, FAIL the run (nothing published).
@@ -22,10 +22,10 @@
  *       ১. এমন topic বাছে যা কখনো publish হয়নি:
  *            ক. সবচেয়ে পুরোনো pending BlogTopicQueue row (admin-curated), নইলে
  *            খ. built-in pool-এর কখনো-ব্যবহার-না-হওয়া brief, নইলে
- *            গ. DeepSeek-এর প্রস্তাবিত একদম নতুন brief।
+ *            গ. Claude-এর প্রস্তাবিত একদম নতুন brief।
  *          প্রতিটি candidate permanent ledger (সব successful run-এর brief +
  *          সব blog title)-এর সাথে helpers/blogSimilarity.js-এর rule-এ যাচাই।
- *       ২. DeepSeek call করে trilingual post generate।
+ *       ২. Claude call করে trilingual post generate।
  *       ৩. Duplicate-title gate: generated title বিদ্যমান post-এর near-
  *          duplicate হলে conflicting title-সহ একবার regenerate; তবুও
  *          duplicate হলে run FAIL (কিছু publish হয় না)।
@@ -41,7 +41,7 @@ const cron = require('node-cron');
 const { Op } = require('sequelize');
 const { Blog, BlogTopicQueue, AiBlogRun, User } = require('../models');
 const {
-  callDeepSeek,
+  generateArticle,
   pickFallbackTopic,
   proposeTopic,
   themeForSlot,
@@ -179,9 +179,9 @@ async function selectTopic({ slotIndex = 0, covered }) {
   const fb = pickFallbackTopic(slotIndex, covered);
   if (fb) return { ...fb, keywordsCsv: '', source: 'auto', queueRow: null };
 
-  // EN: 3) pool exhausted → ask DeepSeek for a new brief, verify it against
+  // EN: 3) pool exhausted → ask Claude for a new brief, verify it against
   //     the ledger ourselves, retry with a hint if the model rephrased.
-  // BN: ৩) pool শেষ → DeepSeek-কে নতুন brief দিতে বলি, নিজেরা ledger-এর সাথে
+  // BN: ৩) pool শেষ → Claude-কে নতুন brief দিতে বলি, নিজেরা ledger-এর সাথে
   //     যাচাই করি, model rephrase করলে hint দিয়ে retry।
   const themeKey = themeForSlot(slotIndex).key;
   let excludeHint = '';
@@ -236,7 +236,7 @@ async function runOnce({ source = 'auto', slotIndex = 0 } = {}) {
   // BN: Generate, তারপর duplicate-title gate। Conflicting title বলে দিয়ে
   //     একবার retry; দ্বিতীয়বারও duplicate হলে run fail।
   const titles = await existingTitles().catch(() => []);
-  let ai = await callDeepSeek({ topic, category, keywordsCsv, theme, slotIndex });
+  let ai = await generateArticle({ topic, category, keywordsCsv, theme, slotIndex });
   let duplicateOf = null;
   for (let attempt = 0; attempt < 2 && ai.ok; attempt++) {
     const candidate = ai.doc.titleEn || ai.doc.title;
@@ -250,7 +250,7 @@ async function runOnce({ source = 'auto', slotIndex = 0 } = {}) {
       `[ai-blog] generated title "${candidate}" duplicates "${near.match}" (${near.score.toFixed(2)})`
     );
     if (attempt === 0) {
-      ai = await callDeepSeek({ topic, category, keywordsCsv, theme, avoidTitles: [near.match], slotIndex });
+      ai = await generateArticle({ topic, category, keywordsCsv, theme, avoidTitles: [near.match], slotIndex });
     }
   }
 

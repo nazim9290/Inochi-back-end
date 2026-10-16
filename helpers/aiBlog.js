@@ -1,6 +1,6 @@
 /**
- * EN: DeepSeek-powered trilingual blog generator. Given a topic brief, asks
- *     DeepSeek to return a structured JSON document with Bangla (primary),
+ * EN: Anthropic-powered trilingual blog generator. Given a topic brief, asks
+ *     Claude to return a structured JSON document with Bangla (primary),
  *     English, and Japanese title/content/excerpt/category/keywords/tags
  *     in one call so the three locales stay editorially consistent.
  *
@@ -9,7 +9,7 @@
  *       1. admin queue (BlogTopicQueue) — always first;
  *       2. the built-in themed pool below, minus EVERY brief/title already
  *          published (permanent ledger, not a 20-run window);
- *       3. when the pool is exhausted, `proposeTopic()` asks DeepSeek for a
+ *       3. when the pool is exhausted, `proposeTopic()` asks Claude for a
  *          brand-new brief that is explicitly NOT a rephrase of anything
  *          covered so far.
  *     Every candidate is checked with helpers/blogSimilarity.js, so the
@@ -19,7 +19,7 @@
  *     Returns null / {ok:false} on any failure (network, parse, missing
  *     key) — caller decides how to log it. Never throws; the scheduler
  *     must keep running.
- * BN: DeepSeek-চালিত trilingual blog generator। Topic brief দিলে DeepSeek-কে
+ * BN: Anthropic-চালিত trilingual blog generator। Topic brief দিলে Claude-কে
  *     একটি structured JSON document return করতে বলে — Bangla (primary),
  *     English, Japanese title/content/excerpt/category/keywords/tags সব
  *     একটি call-এ, যাতে তিনটি locale editorially consistent থাকে।
@@ -28,7 +28,7 @@
  *       ১. admin queue (BlogTopicQueue) — সবসময় আগে;
  *       ২. নিচের built-in themed pool, তবে আগে publish হওয়া প্রতিটি
  *          brief/title বাদ (permanent ledger, ২০-run window নয়);
- *       ৩. pool শেষ হলে `proposeTopic()` DeepSeek-কে একদম নতুন brief দিতে
+ *       ৩. pool শেষ হলে `proposeTopic()` Claude-কে একদম নতুন brief দিতে
  *          বলে — যা এখন পর্যন্ত cover করা কিছুর rephrase নয়।
  *     প্রতিটি candidate helpers/blogSimilarity.js দিয়ে যাচাই হয় — তাই
  *     auto-pilot বছরের পর বছর চললেও একই লেখা দুবার publish হবে না।
@@ -207,8 +207,8 @@ const BROAD_INTENT_KEYWORDS = [
 const CATEGORY_POOL = TOPIC_THEMES.flatMap((t) => t.categories);
 const TOPIC_FALLBACK_POOL = TOPIC_THEMES.flatMap((t) => t.topics);
 
-const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
-const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
+const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
+const AI_MODEL = process.env.AI_MODEL || 'claude-sonnet-5-5';
 
 // EN: Guide hub pages the generator should link to — the strongest
 //     internal-link targets on the site for each theme.
@@ -357,9 +357,9 @@ function serviceForSlot(theme, slotIndex = 0) {
 }
 
 // EN: One-line angle guidance per editorial theme, injected into the user
-//     prompt so DeepSeek frames the article from the right perspective.
+//     prompt so Claude frames the article from the right perspective.
 // BN: প্রতি theme-এ এক লাইনের angle guidance — user prompt-এ যোগ হয় যাতে
-//     DeepSeek সঠিক দৃষ্টিকোণ থেকে লেখে।
+//     Claude সঠিক দৃষ্টিকোণ থেকে লেখে।
 const THEME_ANGLE = {
   'study-in-japan':
     'Angle: the practical how-to of studying in Japan (JLPT, schools, visa, documents). Give concrete steps the student can act on this week.',
@@ -484,38 +484,69 @@ function makeSlug(...titleCandidates) {
   return `post-${Date.now()}`;
 }
 
-// EN: Shared low-level DeepSeek chat call. Returns { ok, text } or
-//     { ok:false, error }. 90 s timeout; never throws.
-// BN: Shared low-level DeepSeek chat call। { ok, text } বা { ok:false, error }
-//     দেয়। ৯০ সেকেন্ড timeout; কখনো throw করে না।
-async function chat(messages, { temperature = 0.8, maxTokens = 8000 } = {}) {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) return { ok: false, error: 'DEEPSEEK_API_KEY missing' };
+// EN: Shared low-level Anthropic chat call. Returns { ok, text } or
+//     { ok:false, error }. 240 s timeout; never throws.
+// BN: Shared low-level Anthropic chat call। { ok, text } বা { ok:false, error }
+//     দেয়। ২৪০ সেকেন্ড timeout; কখনো throw করে না।
+async function chat(messages, { effort = 'medium', maxTokens = 16000 } = {}) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return { ok: false, error: 'ANTHROPIC_API_KEY missing' };
+  // EN: Anthropic keeps the system prompt OUT of messages, unlike the
+  //     OpenAI-shaped API this used before — so split it off here and leave
+  //     every caller untouched.
+  // BN: Anthropic-এ system আলাদা থাকে, messages-এর ভিতরে নয় (আগের
+  //     OpenAI-ধাঁচের API-তে ভিতরেই ছিল) — তাই এখানেই আলাদা করে নিই,
+  //     ডাকনেওয়ালা কোনো জায়গা বদলাতে হয় না।
+  const system = messages
+    .filter((m) => m.role === 'system')
+    .map((m) => m.content)
+    .join('\n\n');
+  const turns = messages
+    .filter((m) => m.role !== 'system')
+    .map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }));
   const body = {
-    model: DEEPSEEK_MODEL,
-    messages,
-    temperature,
+    model: AI_MODEL,
     max_tokens: maxTokens,
-    response_format: { type: 'json_object' },
+    // EN: No `temperature` — Sonnet 5.5 rejects any non-default value with a
+    //     400. Thinking runs by default and its tokens count against
+    //     max_tokens, so `effort` is the knob that keeps it in budget.
+    // BN: `temperature` নেই — Sonnet 5.5 default ছাড়া যেকোনো মানে 400 দেয়।
+    //     Thinking নিজে থেকেই চলে আর max_tokens থেকেই খরচ হয়, তাই budget-এ
+    //     রাখতে `effort` ব্যবহার।
+    output_config: { effort },
+    // EN: no response_format here; extractJsonObject already tolerates fences.
+    // BN: এখানে response_format নেই; extractJsonObject ফেন্স এমনিতেই সামলায়।
+    messages: turns.length ? turns : [{ role: 'user', content: '' }],
   };
+  if (system) body.system = system + '\n\nReturn a single JSON object and nothing else.';
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 90 * 1000);
-    const res = await fetch(DEEPSEEK_URL, {
+    const timer = setTimeout(() => controller.abort(), 240 * 1000);
+    const res = await fetch(ANTHROPIC_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
       body: JSON.stringify(body),
       signal: controller.signal,
     });
     clearTimeout(timer);
     if (!res.ok) {
       const txt = await res.text().catch(() => '');
-      return { ok: false, error: `DeepSeek ${res.status}: ${txt.slice(0, 300)}` };
+      return { ok: false, error: `Anthropic ${res.status}: ${txt.slice(0, 300)}` };
     }
     const json = await res.json();
-    return { ok: true, text: json?.choices?.[0]?.message?.content || '' };
+    if (json?.stop_reason === 'refusal' || json?.stop_reason === 'max_tokens') {
+      return { ok: false, error: `Anthropic stopped early: ${json.stop_reason}` };
+    }
+    const text = Array.isArray(json?.content)
+      ? json.content.filter((b) => b.type === 'text').map((b) => b.text).join('')
+      : '';
+    return { ok: true, text };
   } catch (err) {
-    return { ok: false, error: `DeepSeek request failed: ${err.message || err}` };
+    return { ok: false, error: `Anthropic request failed: ${err.message || err}` };
   }
 }
 
@@ -527,12 +558,11 @@ async function chat(messages, { temperature = 0.8, maxTokens = 8000 } = {}) {
  *     যেগুলো থেকে নতুন post আলাদা হতে হবে — scheduler-এর duplicate-title gate
  *     draft reject করার পর retry-তে ব্যবহার।
  */
-async function callDeepSeek({ topic, category, keywordsCsv, theme, avoidTitles, slotIndex = 0 }) {
-  // EN: 0.8 adds a little more variety in phrasing across days. max_tokens
-  //     8000 — three 800–1200 word articles + JSON overflowed 4000 and
-  //     truncated the response, which broke JSON.parse.
-  // BN: 0.8 শব্দচয়নে একটু বেশি বৈচিত্র্য দেয়। max_tokens 8000 — তিনটি
-  //     800–1200 শব্দের লেখা + JSON 4000 ছাড়িয়ে truncate করত, JSON.parse ভাঙত।
+async function generateArticle({ topic, category, keywordsCsv, theme, avoidTitles, slotIndex = 0 }) {
+  // EN: max_tokens 16000 — three 800–1200 word articles + JSON need ~8000,
+  //     and thinking tokens come out of the same budget.
+  // BN: max_tokens 16000 — তিনটি 800–1200 শব্দের লেখা + JSON-এ ~8000 লাগে,
+  //     আর thinking-ও একই budget থেকে খরচ হয়।
   const r = await chat(
     [
       { role: 'system', content: buildSystemPrompt() },
@@ -541,7 +571,7 @@ async function callDeepSeek({ topic, category, keywordsCsv, theme, avoidTitles, 
         content: buildUserPrompt({ topic, category, keywordsCsv, theme, avoidTitles, slotIndex }),
       },
     ],
-    { temperature: 0.8, maxTokens: 8000 }
+    { effort: 'medium', maxTokens: 16000 }
   );
   if (!r.ok) return r;
   const doc = extractJsonObject(r.text);
@@ -550,12 +580,12 @@ async function callDeepSeek({ topic, category, keywordsCsv, theme, avoidTitles, 
 }
 
 /**
- * EN: Ask DeepSeek for ONE brand-new topic brief in a theme that is not a
+ * EN: Ask Claude for ONE brand-new topic brief in a theme that is not a
  *     rephrase of anything in `covered` (briefs + titles already on the
  *     blog). Used only when the built-in pool is exhausted. The result is
  *     re-checked with isNearDuplicate by the caller — the model's promise
  *     is not trusted.
- * BN: DeepSeek-কে একটি theme-এ একদম নতুন topic brief দিতে বলে — যা `covered`
+ * BN: Claude-কে একটি theme-এ একদম নতুন topic brief দিতে বলে — যা `covered`
  *     (blog-এ থাকা brief + title)-এর কোনোটার rephrase নয়। শুধু built-in
  *     pool শেষ হলে ব্যবহার। Caller isNearDuplicate দিয়ে আবার যাচাই করে —
  *     model-এর প্রতিশ্রুতিতে ভরসা নেই।
@@ -585,7 +615,9 @@ async function proposeTopic({ themeKey, covered = [], excludeHint = '' }) {
       ].join('\n\n'),
     },
   ];
-  const r = await chat(messages, { temperature: 1.0, maxTokens: 400 });
+  // EN: 400 tokens was eaten by thinking → empty text → "too-short topic".
+  // BN: 400 token thinking-এই শেষ হয়ে যেত → খালি text → "too-short topic"।
+  const r = await chat(messages, { effort: 'low', maxTokens: 4000 });
   if (!r.ok) return r;
   const doc = extractJsonObject(r.text);
   const topic = String(doc?.topic || '').trim();
@@ -608,7 +640,7 @@ module.exports = {
   themeForSlot,
   pickFallbackTopic,
   proposeTopic,
-  callDeepSeek,
+  generateArticle,
   makeSlug,
   // EN: Re-exported so tests and the scheduler share one similarity rule.
   // BN: Test আর scheduler যাতে একই similarity rule share করে — re-export।

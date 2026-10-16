@@ -85,8 +85,8 @@ exports.listRuns = async (req, res) => {
 
 exports.triggerManual = async (req, res) => {
   try {
-    if (!process.env.DEEPSEEK_API_KEY) {
-      return res.status(503).json({ error: 'DEEPSEEK_API_KEY not configured on server' });
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured on server' });
     }
     const r = await runOnce({ source: 'manual' });
     if (!r.ok) {
@@ -103,14 +103,14 @@ exports.status = async (req, res) => {
   const hours = getPublishHours(perDay);
   res.json({
     enabled: process.env.AI_BLOG_ENABLED === 'true',
-    hasApiKey: !!process.env.DEEPSEEK_API_KEY,
+    hasApiKey: !!process.env.ANTHROPIC_API_KEY,
     hasImageGen: !!(
       process.env.CLOUDINARY_CLOUD_NAME &&
       process.env.CLOUDINARY_API_KEY &&
       process.env.CLOUDINARY_API_SECRET
     ),
     imageProvider: 'Wikimedia Commons → Cloudinary',
-    model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+    model: process.env.AI_MODEL || 'claude-sonnet-5-5',
     perDay,
     hours,
     // EN: `hour` kept for backward compatibility with older admin builds.
