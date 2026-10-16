@@ -803,7 +803,32 @@ async function isSameSubject({ topic, recentTitles = [] }) {
   return { duplicate: doc?.duplicate === true, of: String(doc?.of || '') };
 }
 
+// EN: A cover-image search for an EXISTING post, from its title — used by
+//     scripts/refresh-duplicate-covers.js to re-cover old posts.
+// BN: বিদ্যমান post-এর title থেকে cover-image search — পুরোনো post-এর ছবি
+//     বদলাতে scripts/refresh-duplicate-covers.js ব্যবহার করে।
+async function proposeImageQuery(title) {
+  const r = await chat(
+    [
+      {
+        role: 'system',
+        content:
+          'You pick a cover photo search for a blog post about studying or living in Japan. Return only a JSON object.',
+      },
+      {
+        role: 'user',
+        content: `Post title: ${title}\n\nReturn exactly: {"imageQuery": "2–4 English words naming ONE concrete, photographable subject specific to this post (a place, object or scene, e.g. a landmark, food, document, season, vehicle). Never generic words like students, study, university, education."}`,
+      },
+    ],
+    { effort: 'low', maxTokens: 2000 }
+  );
+  if (!r.ok) return { ok: false, error: r.error };
+  const q = String(extractJsonObject(r.text)?.imageQuery || '').trim();
+  return q ? { ok: true, imageQuery: q.slice(0, 80) } : { ok: false, error: 'empty imageQuery' };
+}
+
 module.exports = {
+  proposeImageQuery,
   ARTICLE_FORMATS,
   formatForSlot,
   isSameSubject,
