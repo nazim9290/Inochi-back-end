@@ -51,6 +51,7 @@ const {
   nearestMatch,
 } = require('./aiBlog');
 const { generateCoverImage } = require('./blogImage');
+const { removeEmDashDeep } = require('./noEmDash');
 const { pingPaths } = require('./indexnow');
 
 // EN: Resolve the User row to attribute the AI post to. Priority:
@@ -91,6 +92,9 @@ async function resolveAuthorId() {
 //     constrain করে; এটা undefined/null leakage আটকায় ও field-এর length
 //     cap enforce করে — DB column limit কখনো ভাঙবে না।
 function shape(doc, source, topic, image) {
+  // EN: Em dashes are banned in the prompt; this catches any that slip through.
+  // BN: Prompt-এ em dash নিষেধ; তবু কোনোটা এলে এখানে ধরা পড়ে।
+  doc = removeEmDashDeep(doc);
   const slug = makeSlug(doc.titleEn, doc.titleJa, doc.title);
   const safeTags =
     typeof doc.tags === 'object' && doc.tags
