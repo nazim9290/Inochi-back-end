@@ -6,6 +6,8 @@
  *       1. Facebook Page token dead/expired → auto-posts silently stop.
  *       2. AI blog runs that FAILED in the last 24h (bad JSON, duplicate
  *          title, no unique topic...).
+ *       3. Mondays: the site-quality audit (scripts/audit-site.mjs in the
+ *          frontend) against the live site.
  *     A healthy day sends nothing — no inbox noise. `runHealthCheck` is also
  *     callable manually (used right after deploy to verify the pipeline).
  * BN: দৈনিক site health check। প্রতিদিন সকালে (১০:০৭ local) চলে, যে সমস্যাগুলো
@@ -29,7 +31,9 @@ const esc = (s) =>
 
 // EN: Gather issues. Each item: { title, detail } (detail is HTML-safe here).
 // BN: সমস্যা জড়ো করা। প্রতিটা item: { title, detail } (detail HTML-safe)।
-async function collectIssues() {
+// EN: `siteAudit` defaults to Mondays only; pass true to force it.
+// BN: `siteAudit` default শুধু সোমবার; true দিলে যেকোনো দিন চলে।
+async function collectIssues({ siteAudit = new Date().getDay() === 1 } = {}) {
   const issues = [];
 
   // 1) Facebook Page token — only when FB is configured at all.
@@ -114,13 +118,55 @@ async function collectIssues() {
     issues.push({ title: 'AI blog history পড়া যায়নি', detail: esc(err.message) });
   }
 
+  // 3) Weekly (Mondays) site-quality audit: the CLAUDE.md "Site quality
+  //    rules" checked on the live site by the frontend's audit script.
+  if (siteAudit) {
+    const audit = await runSiteAudit();
+    if (!audit.ok) {
+      issues.push({
+        title: 'সাপ্তাহিক সাইট-মান পরীক্ষা: কিছু নিয়ম ভেঙেছে',
+        detail:
+          `<pre style="white-space:pre-wrap;font-size:12px">${esc(audit.report)}</pre>` +
+          'প্রতিটা ✗ লাইন একটা নিয়ম (যেমন 404 page, meta descriptions, em dashes) ' +
+          'আর নিচে কোন page-এ ভেঙেছে। ডেভেলপারকে এই ইমেলটা পাঠালেই হবে।',
+      });
+    }
+  }
+
   return issues;
+}
+
+// EN: Run the frontend's scripts/audit-site.mjs against the live site and
+//     return { ok, report }. A missing script or a crash counts as a
+//     failure with the reason as the report, so it is never silently skipped.
+// BN: Frontend-এর scripts/audit-site.mjs live site-এ চালিয়ে { ok, report }
+//     দেয়। Script না পেলে বা crash করলে সেটাও ব্যর্থতা হিসেবে কারণসহ জানায়
+//     — নিঃশব্দে বাদ পড়ে না।
+function runSiteAudit() {
+  const { execFile } = require('child_process');
+  const fs = require('fs');
+  const script = process.env.SITE_AUDIT_SCRIPT || '/home/inochi/global/scripts/audit-site.mjs';
+  const site = process.env.PUBLIC_SITE_URL || 'https://inochieducation.com';
+  if (!fs.existsSync(script)) {
+    return Promise.resolve({ ok: false, report: `audit script not found: ${script}` });
+  }
+  return new Promise((resolve) => {
+    execFile(
+      process.execPath,
+      [script, site, '80'],
+      { timeout: 15 * 60 * 1000, maxBuffer: 4 * 1024 * 1024 },
+      (err, stdout, stderr) => {
+        const report = `${stdout || ''}${stderr || ''}`.trim().slice(0, 6000);
+        resolve({ ok: !err, report: report || String(err?.message || '') });
+      }
+    );
+  });
 }
 
 // EN: Run once. Emails only when there are issues (or notifyWhenHealthy).
 // BN: একবার চালানো। শুধু সমস্যা থাকলে (বা notifyWhenHealthy দিলে) ইমেল যায়।
-async function runHealthCheck({ notifyWhenHealthy = false } = {}) {
-  const issues = await collectIssues();
+async function runHealthCheck({ notifyWhenHealthy = false, siteAudit } = {}) {
+  const issues = await collectIssues(siteAudit === undefined ? undefined : { siteAudit });
   const mailer = require('./mailer');
 
   if (issues.length) {
@@ -191,4 +237,4 @@ function startHealthCheck() {
   console.log('[health] daily site health check scheduled at 10:07 local');
 }
 
-module.exports = { startHealthCheck, runHealthCheck, collectIssues };
+module.exports = { startHealthCheck, runHealthCheck, collectIssues, runSiteAudit };
