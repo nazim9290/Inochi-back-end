@@ -309,6 +309,19 @@ function buildSystemPrompt() {
     //     শেষ হত — এখন user prompt-এর post-প্রতি ARTICLE FORMAT-ই শুরু আর
     //     কাঠামো ঠিক করে।
     'Follow the ARTICLE FORMAT given in the user prompt exactly — it decides how the article opens and how it is structured. NEVER open with a student or parent visiting / calling / messaging the office, and never use the address "Sir". Do not reuse the stock section headings "What you can do this week", "An honest trade-off", "An honest word" or "Why Japan is worth it". A personal anecdote is optional, at most one short one, and never in the first paragraph unless the format asks for a story.',
+    // EN: Answer engines (Google AI Overviews, featured snippets, ChatGPT,
+    //     voice assistants) quote the first self-contained answer they find
+    //     and the text right under a question heading. These two rules hold
+    //     for every ARTICLE FORMAT, so every post has something quotable.
+    //     The site's speakable markup points at that first paragraph and its
+    //     schema turns "?" headings into Question/Answer pairs.
+    // BN: Answer engine (Google AI Overview, featured snippet, ChatGPT, voice
+    //     assistant) প্রথম স্বয়ংসম্পূর্ণ উত্তর আর প্রশ্ন-heading-এর ঠিক নিচের
+    //     লেখা উদ্ধৃত করে। এই দুই নিয়ম সব ARTICLE FORMAT-এ খাটে, তাই প্রতিটা
+    //     post-এ উদ্ধৃত করার মতো কিছু থাকে। সাইটের speakable markup ওই প্রথম
+    //     অনুচ্ছেদ ধরে, আর schema "?"-heading-কে Question/Answer জোড়া বানায়।
+    'ANSWER FIRST: in every language, the very first <p> of the content directly answers the question the title raises in 40–60 words: the key number, fact or verdict, complete on its own and readable aloud, with no story, greeting or "in this article". In the DAY-IN-THE-LIFE STORY format this answer paragraph comes first and the story starts after it.',
+    'QUESTION HEADINGS: wherever the ARTICLE FORMAT does not fix the heading pattern (Myth headings and month headings keep theirs), write the <h2>/<h3> headings as the real question a student would type into Google or ask a phone, ending with "?". In Bangla use everyday spoken Bangla, e.g. "জাপানে পার্টটাইম করে মাসে কত আয় হয়?". The first sentence under each question heading answers it directly, then the detail follows.',
     'BANNED phrases — never use any of these: "In today\'s fast-paced world", "In conclusion", "Moreover", "Furthermore", "It is important to note", "delve", "tapestry", "navigate the complexities", "embark on a journey", "unlock", "in the realm of", "ever-evolving". Never use the em dash character (—) anywhere, in any language: use a comma, a colon or a new sentence instead. End with a warm, practical nudge — not a summary paragraph.',
     'Be factually accurate and current. If a number can shift (fees, exchange rates, visa rules), say it is approximate and tell the reader to confirm. Never invent fake statistics, fake named student quotes, or fake scholarship guarantees.',
     'Always return a single valid JSON object — no Markdown fences, no commentary, no leading text.',
@@ -469,9 +482,12 @@ function buildUserPrompt({
         title: 'Bangla title (max 100 chars, compelling, includes keyword)',
         titleEn: 'English title (max 100 chars)',
         titleJa: 'Japanese title (max 100 chars)',
-        excerpt: 'Bangla excerpt (140–180 chars, plain text, no HTML)',
-        excerptEn: 'English excerpt (140–180 chars, plain text, no HTML)',
-        excerptJa: 'Japanese excerpt (140–180 chars, plain text, no HTML)',
+        excerpt:
+          'Bangla excerpt (140–180 chars, plain text, no HTML): one sentence that directly answers the title',
+        excerptEn:
+          'English excerpt (140–180 chars, plain text, no HTML): one sentence that directly answers the title',
+        excerptJa:
+          'Japanese excerpt (140–180 chars, plain text, no HTML): one sentence that directly answers the title',
         content: '<p>...</p> Bangla full HTML body (700–1100 words, valid semantic HTML)',
         contentEn: '<p>...</p> English full HTML body (700–1100 words)',
         contentJa: '<p>...</p> Japanese full HTML body (700–1100 words)',
