@@ -73,4 +73,33 @@ function removeEmDashDeep(value, field = '') {
   return value;
 }
 
-module.exports = { removeEmDash, removeEmDashDeep };
+// EN: Strip em dashes on every save of the given models, so text typed in
+//     the admin panel can never bring them back. Covers instance saves,
+//     bulkCreate and Model.update(). Only changed fields are touched.
+// BN: দেওয়া model-গুলোর প্রতিটা save-এ em dash সরায় — admin panel-এ লেখা
+//     থেকে আর ফিরে আসতে পারবে না। Instance save, bulkCreate আর
+//     Model.update() সব ধরে। শুধু বদলানো field ছোঁয়।
+function cleanInstance(inst) {
+  const fields = inst.changed() || [];
+  for (const k of fields) {
+    const v = inst.get(k);
+    const next = removeEmDashDeep(v, k);
+    if (JSON.stringify(next) !== JSON.stringify(v)) inst.set(k, next);
+  }
+}
+
+function attachNoEmDashHooks(models) {
+  for (const M of models) {
+    M.addHook('beforeSave', 'noEmDash', cleanInstance);
+    M.addHook('beforeBulkCreate', 'noEmDash', (instances) => instances.forEach(cleanInstance));
+    M.addHook('beforeBulkUpdate', 'noEmDash', (options) => {
+      if (options.attributes) {
+        for (const [k, v] of Object.entries(options.attributes)) {
+          options.attributes[k] = removeEmDashDeep(v, k);
+        }
+      }
+    });
+  }
+}
+
+module.exports = { removeEmDash, removeEmDashDeep, attachNoEmDashHooks };

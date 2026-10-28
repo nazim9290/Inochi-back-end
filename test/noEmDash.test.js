@@ -45,3 +45,18 @@ test('deep version cleans nested JSON and leaves other values', () => {
     n: 3,
   });
 });
+
+test('admin saves of public content lose their em dashes (model hooks)', async () => {
+  const { Faq, Contact } = require('../models');
+  const faq = Faq.build({ answer: 'Yes — we help.', answerEn: 'Yes — we help.' });
+  await Faq.runHooks('beforeSave', faq, {});
+  assert.strictEqual(faq.get('answer'), 'Yes: we help.');
+  const opts = { attributes: { answer: 'A — B' } };
+  await Faq.runHooks('beforeBulkUpdate', opts);
+  assert.strictEqual(opts.attributes.answer, 'A: B');
+  // visitor-written text is left as typed
+  assert.strictEqual(
+    Contact.options.hooks?.beforeSave?.some((h) => h.name === 'noEmDash') || false,
+    false
+  );
+});

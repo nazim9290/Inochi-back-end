@@ -1,4 +1,5 @@
 const sequelize = require('../config/database');
+const { attachNoEmDashHooks } = require('../helpers/noEmDash');
 
 const User = require('./userModel');
 const Blog = require('./blogModel');
@@ -98,6 +99,53 @@ BlogBookmark.belongsTo(Blog, { foreignKey: 'blogId', as: 'blog' });
 // BN: Application optionally User-এর সাথে link (/account tracker-এর জন্য)।
 User.hasMany(Application, { foreignKey: 'userId', as: 'applications', onDelete: 'SET NULL' });
 Application.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+// EN: Public, admin-written content: no em dashes, ever (site style rule).
+//     Text written by visitors (reviews, comments, contact messages,
+//     applications) is deliberately not in this list.
+// BN: Public, admin-এর লেখা content: em dash কখনো নয় (site-এর style নিয়ম)।
+//     Visitor-দের লেখা (review, comment, contact message, application)
+//     ইচ্ছা করেই এই তালিকায় নেই।
+attachNoEmDashHooks([
+  Blog,
+  Team,
+  Brand,
+  CaruselModel,
+  Seminer,
+  Video,
+  ContacPage,
+  ImageTopCarousel,
+  Rpage,
+  Image,
+  SiteSettings,
+  HowItWorksStep,
+  JlptCourse,
+  SuccessStory,
+  Faq,
+  Branch,
+  BdCity,
+  JpCity,
+  Event,
+  ChecklistItem,
+  ScamItem,
+  Achievement,
+  HomeVideo,
+  AgencyMoment,
+  GlossaryTerm,
+  UniversityRanking,
+  PressMention,
+  CommunityChannel,
+  JlptSession,
+  VisaInterviewItem,
+  QuizQuestion,
+  QuizTier,
+  MockTest,
+  MockQuestion,
+  Intake,
+  University,
+  Scholarship,
+  PreDepartureItem,
+]);
 
 module.exports = {
   sequelize,
