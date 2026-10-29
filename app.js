@@ -4,7 +4,6 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const multer = require('multer');
-const Fingerprint = require('express-fingerprint');
 const { nanoid } = require('nanoid');
 const rateLimit = require('express-rate-limit');
 
@@ -43,7 +42,11 @@ const corsOptions = {
     if (process.env.DEV_CORS === 'open') return cb(null, true);
     if (!origin) return cb(null, true); // server-to-server / curl
     if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-    return cb(new Error(`CORS blocked: ${origin}`));
+    // EN: 403, not 500: a foreign origin is a refused request, not a crash.
+    // BN: 500 নয়, 403: অচেনা origin মানে অনুরোধ নাকচ, server crash নয়।
+    const err = new Error('Origin not allowed');
+    err.status = 403;
+    return cb(err);
   },
   credentials: true,
 };
@@ -66,11 +69,6 @@ app.use(
   })
 );
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
-app.use(
-  Fingerprint({
-    parameters: [Fingerprint.useragent, Fingerprint.acceptHeaders, Fingerprint.geoip],
-  })
-);
 
 // EN: Global soft limiter — 300 req / 15 min per IP across all routes.
 //     Catches obvious crawlers/abuse without affecting normal browsing.
@@ -134,10 +132,6 @@ app.get('/', (req, res) => {
     serverName: 'Inochi Global Education Institute',
     status: 'ok',
   });
-});
-
-app.get('/fingerprint', (req, res) => {
-  res.json({ fingerprint: req.fingerprint, clientIp: req.clientIp });
 });
 
 // Routes

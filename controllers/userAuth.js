@@ -94,7 +94,14 @@ exports.login = async (req, res) => {
     //     can't be probed for "user exists vs not" by timing the response.
     // BN: Lockout gate — DB user lookup-এর আগে চলে যাতে locked email-এ
     //     response time দেখে "user আছে কিনা" probe করা না যায়।
-    const attempt = await LoginAttempt.findOne({ where: { email: normalized } });
+    // EN: The lock is per email + IP. Keyed by email alone, anyone could lock
+    //     the admin out by typing five wrong passwords for the admin email.
+    //     Spreading guesses over many IPs is still capped by the IP limiter.
+    // BN: Lock email + IP অনুযায়ী। শুধু email দিয়ে হলে যে কেউ admin-এর email-এ
+    //     পাঁচবার ভুল password দিয়ে admin-কে আটকে দিতে পারত। অনেক IP থেকে
+    //     চেষ্টা IP limiter আটকায়।
+    const key = attemptKey(normalized, req.ip);
+    const attempt = await LoginAttempt.findOne({ where: { email: key } });
     if (attempt && attempt.lockedUntil && attempt.lockedUntil > new Date()) {
       const waitMin = Math.ceil((attempt.lockedUntil - new Date()) / 60000);
       return res.status(429).json({
@@ -108,7 +115,7 @@ exports.login = async (req, res) => {
     // BN: "user নেই" + "wrong password" — দু'টোর জন্য একই generic message
     //     যাতে attacker login form দিয়ে valid email enumerate করতে না পারে।
     const fail = async () => {
-      await recordLoginFailure(normalized);
+      await recordLoginFailure(key);
       return res.json({ error: 'Invalid email or password' });
     };
     if (!user) return fail();
@@ -135,6 +142,12 @@ exports.login = async (req, res) => {
 // BN: Failure counter upsert; window-এর মধ্যে MAX_FAILS অতিক্রম করলে lock।
 //     Long gap-এ window reset — যে user দিনে একবার ভুল করে তাকে lockout
 //     accumulate করে না।
+// EN: Row key for the lockout table: "email|ip", capped to the column size.
+// BN: Lockout table-এর row key: "email|ip", column-এর মাপে কাটা।
+function attemptKey(email, ip) {
+  return `${email}|${ip || 'unknown'}`.slice(0, 200);
+}
+
 async function recordLoginFailure(email) {
   const now = new Date();
   let row = await LoginAttempt.findOne({ where: { email } });
