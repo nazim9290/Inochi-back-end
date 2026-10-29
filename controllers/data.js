@@ -13,7 +13,7 @@ const {
 const teamAuthorInclude = {
   model: User,
   as: 'author',
-  attributes: ['id', 'name', 'email', 'image'],
+  attributes: ['id', 'name', 'image'],
 };
 
 exports.contacpageCreate = async (req, res) => {

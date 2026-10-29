@@ -1,6 +1,5 @@
 // Middleware to check the authorization token
 const checkStudent = (req, res, next) => {
-    console.log("user", req.user);
   
     try {
       const user = req.user;

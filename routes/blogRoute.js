@@ -30,7 +30,7 @@ const { createBlog, updateBlog, allPublishedBlog,
         checkFacebookConnection,
         CreateCarusel } = require("../controllers/blogControlar");
 
-router.post("/create-blog", requireAuth, createBlog);
+router.post("/create-blog", requireAuth, checkAdmin, createBlog);
 router.put("/update-blog/:id", requireAuth, checkAdmin, blogPing, updateBlog);
 router.post("/blog/:id/post-to-facebook", requireAuth, checkAdmin, postBlogToFacebook);
 router.get("/facebook/check", requireAuth, checkAdmin, checkFacebookConnection);
@@ -38,16 +38,16 @@ router.get('/pending-blogs', requireAuth, checkAdmin, allPendingBlog);
 router.get('/blog/:id', requireAuth, checkAdmin, blogPing, singleBlog);
 router.delete('/blog/:id', requireAuth, checkAdmin, blogPing, deleteBlogById);
 //
-router.put('/approve-blog/:id', blogPing, singlgleBlogTags)
+router.put('/approve-blog/:id', requireAuth, checkAdmin, blogPing, singlgleBlogTags)
 router.put('/publised-single-blog/:id', requireAuth, checkAdmin, singleBlogconvert);
 // 
 // 
-router.post("/create-carusel",  CreateCarusel)
+router.post("/create-carusel", requireAuth, checkAdmin, CreateCarusel)
 // public route :
 router.get('/published-blogs', allPublishedBlog);
 router.get("/draft-carusel", getCaruselDraft);
-router.delete("/delete-carusel/:id", requireAuth, deleteCaruselDraft);
-router.put("/aproved-carusel/:id", aprovedCarusel);
+router.delete("/delete-carusel/:id", requireAuth, checkAdmin, deleteCaruselDraft);
+router.put("/aproved-carusel/:id", requireAuth, checkAdmin, aprovedCarusel);
 
 router.get("/published-carusels", getCarusel);
 router.get("/blogs-published",allPublishedBlogBlogs);

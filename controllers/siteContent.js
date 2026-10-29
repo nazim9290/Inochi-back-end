@@ -18,13 +18,28 @@ const { logAudit } = require('../helpers/audit');
 
 // ---------------- SITE SETTINGS (singleton) ----------------
 
+// EN: The Facebook Page access token is a credential: it must never be sent
+//     to a browser. The public GET (and the admin PUT reply) return only
+//     `fbPageAccessTokenSet`. An empty token in a PUT keeps the stored one,
+//     so saving the admin form without retyping it does not wipe it.
+// BN: Facebook Page access token একটা গোপন চাবি: কখনো browser-এ যাবে না।
+//     Public GET (আর admin PUT-এর উত্তর) শুধু `fbPageAccessTokenSet` দেয়।
+//     PUT-এ token খালি থাকলে আগেরটাই থাকে, তাই আবার না লিখে admin form
+//     Save করলে token মুছে যায় না।
+function publicSettings(settings) {
+  const json = settings.toJSON();
+  json.fbPageAccessTokenSet = Boolean(json.fbPageAccessToken);
+  delete json.fbPageAccessToken;
+  return json;
+}
+
 exports.getSiteSettings = async (req, res) => {
   try {
     let settings = await SiteSettings.findOne();
     if (!settings) {
       settings = await SiteSettings.create({});
     }
-    res.json({ settings });
+    res.json({ settings: publicSettings(settings) });
   } catch (err) {
     console.error('Error fetching site settings:', err);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -33,6 +48,10 @@ exports.getSiteSettings = async (req, res) => {
 
 exports.updateSiteSettings = async (req, res) => {
   try {
+    const body = { ...(req.body || {}) };
+    delete body.fbPageAccessTokenSet;
+    if (!String(body.fbPageAccessToken || '').trim()) delete body.fbPageAccessToken;
+    req.body = body;
     let settings = await SiteSettings.findOne();
     if (!settings) {
       settings = await SiteSettings.create(req.body || {});
@@ -46,7 +65,7 @@ exports.updateSiteSettings = async (req, res) => {
       summary: `Site settings updated (${Object.keys(req.body || {}).length} fields)`,
       details: { fields: Object.keys(req.body || {}) },
     });
-    res.json({ message: 'Site settings updated', settings });
+    res.json({ message: 'Site settings updated', settings: publicSettings(settings) });
   } catch (err) {
     console.error('Error updating site settings:', err);
     res.status(500).json({ error: 'Internal Server Error' });

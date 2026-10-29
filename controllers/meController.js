@@ -7,14 +7,7 @@
  *     সব route ধরে নেয় requireAuth req.user populate করেছে।
  */
 
-const { Op } = require('sequelize');
-const {
-  User,
-  Application,
-  BlogBookmark,
-  Blog,
-  BlogComment,
-} = require('../models');
+const { User, Application, BlogBookmark, Blog, BlogComment } = require('../models');
 
 const { hashPassword, comparePassword } = require('../helpers/auth');
 
@@ -62,8 +55,8 @@ exports.changePassword = async (req, res) => {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ error: 'Both passwords required' });
     }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'New password must be 6+ characters' });
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'New password must be 8+ characters' });
     }
     const ok = await comparePassword(currentPassword, req.user.password);
     if (!ok) return res.status(403).json({ error: 'Current password is wrong' });
@@ -85,10 +78,13 @@ exports.changePassword = async (req, res) => {
 exports.listApplications = async (req, res) => {
   try {
     const userId = req.user.id;
-    const email = req.user.email;
-    const where = email
-      ? { [Op.or]: [{ userId }, { email }] }
-      : { userId };
+    // EN: userId only. Matching by email let anyone who registered with (or
+    //     changed their profile to) an applicant's email read that applicant's
+    //     DOB, address and documents, because emails are never verified.
+    // BN: শুধু userId। Email দিয়ে মেলালে যে কেউ কোনো applicant-এর email দিয়ে
+    //     register করে (বা profile-এ বসিয়ে) তার জন্মতারিখ, ঠিকানা, কাগজপত্র
+    //     দেখতে পারত, কারণ email কখনো যাচাই হয় না।
+    const where = { userId };
     const items = await Application.findAll({
       where,
       order: [['createdAt', 'DESC']],
@@ -137,9 +133,7 @@ exports.listComments = async (req, res) => {
     const items = await BlogComment.findAll({
       where: { userId: req.user.id },
       order: [['createdAt', 'DESC']],
-      include: [
-        { model: Blog, as: 'blog', attributes: ['id', 'title', 'titleEn'] },
-      ],
+      include: [{ model: Blog, as: 'blog', attributes: ['id', 'title', 'titleEn'] }],
       limit: 200,
     });
     res.json({ ok: true, total: items.length, items });

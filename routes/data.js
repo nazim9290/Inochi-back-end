@@ -33,14 +33,18 @@ const { contacpageCreate,
 } = require("../controllers/data.js");
 
 // router.post("/homepage",HomePageCarusel);
-router.post("/contacpage", contacpageCreate)
+router.post("/contacpage", requireAuth, checkAdmin, contacpageCreate)
 router.get("/conctact-page", contacpageData);
 router.post("/team-create", requireAuth, checkAdmin, pingTeam, createTeam);
 router.put("/team-member-update/:id", requireAuth, checkAdmin, pingTeam, updateTeam);
 router.get("/team-member", allTeam);
 router.delete("/team-member-delete/:_id", requireAuth, checkAdmin, deleteSingeteam);
 router.post("//create-review", requireAuth, ReviewCreate);
-router.get("/review", Review);
+// EN: Returns every review with email/phone/adminNotes: admin-only. The
+//     public site uses /published-reviews.
+// BN: সব review email/phone/adminNotes সহ দেয়: শুধু admin। Public site
+//     /published-reviews ব্যবহার করে।
+router.get("/review", requireAuth, checkAdmin, Review);
 // sesion create:
 router.post("/seminar-create", requireAuth, checkAdmin, pingSeminars, createSeminar);
 router.put("/seminar-update/:id", requireAuth, checkAdmin, pingSeminars, updateSeminar);

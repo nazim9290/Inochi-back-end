@@ -30,7 +30,7 @@ const buildFbPayload = (blog) => {
 const authorInclude = {
   model: User,
   as: 'author',
-  attributes: ['id', 'name', 'phone', 'image'],
+  attributes: ['id', 'name', 'image'],
 };
 
 exports.createBlog = async (req, res) => {

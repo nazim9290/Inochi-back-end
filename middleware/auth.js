@@ -19,7 +19,7 @@ const requireAuth = async (req, res, next) => {
   }
 
   try {
-    const decoded = verify(token, process.env.JWT_SECRET);
+    const decoded = verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     const user = await User.findByPk(decoded._id || decoded.id);
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized - User not found' });

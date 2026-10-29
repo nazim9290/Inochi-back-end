@@ -16,7 +16,7 @@ const optionalAuth = async (req, _res, next) => {
   if (!token) return next();
 
   try {
-    const decoded = verify(token.split(' ')[1], process.env.JWT_SECRET);
+    const decoded = verify(token.split(' ')[1], process.env.JWT_SECRET, { algorithms: ['HS256'] });
     const user = await User.findByPk(decoded._id || decoded.id);
     if (user) req.user = user;
   } catch {

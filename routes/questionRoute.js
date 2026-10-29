@@ -33,6 +33,6 @@ router.get("catagories/one", getQuestionByFullOne);
 router.get("catagories/two", getQuestionByFullTwo);
 // 
 
-router.put("/update-question/:_id", updateQuestion)
-router.delete("/delete-question/:_id", deleteQuestion);
+router.put("/update-question/:_id", requireAuth, checkAdmin, updateQuestion)
+router.delete("/delete-question/:_id", requireAuth, checkAdmin, deleteQuestion);
 module.exports = router;
