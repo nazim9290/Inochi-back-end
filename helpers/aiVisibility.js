@@ -121,6 +121,29 @@ async function ask(question) {
   return scoreAnswer((await res.json()).content);
 }
 
+// EN: Questions where AI left Inochi out become AI-blog topics (answer-first
+//     posts that close by naming an Inochi office + service). Max 4 a month,
+//     and a question is not re-queued within 120 days.
+// BN: যেসব প্রশ্নে AI Inochi-কে বাদ দিয়েছে, সেগুলো AI blog-এর topic হয়
+//     (শুরুতেই উত্তর, শেষে Inochi-র অফিস + সেবার নাম)। মাসে সর্বোচ্চ ৪টা,
+//     একই প্রশ্ন ১২০ দিনের মধ্যে আবার queue হয় না।
+const GAP_TOPICS_PER_RUN = 4;
+async function queueGapTopics(rows) {
+  const { BlogTopicQueue } = require('../models');
+  const { Op } = require('sequelize');
+  const since = new Date(Date.now() - 120 * 86400000);
+  const queued = [];
+  for (const r of rows) {
+    if (queued.length >= GAP_TOPICS_PER_RUN) break;
+    if (r.error || r.mentioned || r.cited) continue;
+    const exists = await BlogTopicQueue.findOne({ where: { topic: r.q, createdAt: { [Op.gte]: since } } });
+    if (exists) continue;
+    await BlogTopicQueue.create({ topic: r.q, keywordsCsv: r.q });
+    queued.push(r.q);
+  }
+  return queued;
+}
+
 function lastRun() {
   try {
     const lines = fs.readFileSync(HISTORY, 'utf8').trim().split('\n');
@@ -152,6 +175,10 @@ async function runAiVisibility({ email = true } = {}) {
 
   fs.mkdirSync(path.dirname(HISTORY), { recursive: true });
   fs.appendFileSync(HISTORY, JSON.stringify(run) + '\n');
+  run.queued = await queueGapTopics(rows).catch((err) => {
+    console.error('[geo] queueing gap topics failed:', err.message);
+    return [];
+  });
 
   if (email) {
     const esc = (s) =>
@@ -163,7 +190,11 @@ async function runAiVisibility({ email = true } = {}) {
       `। আরও ${rows.filter((r) => r.seen && !r.mentioned && !r.cited).length}টা প্রশ্নে সাইট সার্চে এসেছিল কিন্তু উত্তরে বাদ পড়েছে।</p>` +
       '<table style="border-collapse:collapse;font-size:13px">' +
       rows.map((r) => `<tr><td style="padding:3px 8px">${mark(r)}</td><td style="padding:3px 8px">${esc(r.q)}</td></tr>`).join('') +
-      '</table><p><strong>Inochi-র বদলে যেসব সাইট উদ্ধৃত হচ্ছে:</strong><br/>' +
+      '</table>' +
+      (run.queued.length
+        ? `<p><strong>AI blog-এর queue-তে যোগ হয়েছে (সামনের দিনগুলোতে স্বয়ংক্রিয়ভাবে publish হবে):</strong><br/>${run.queued.map(esc).join('<br/>')}</p>`
+        : '') +
+      '<p><strong>Inochi-র বদলে যেসব সাইট উদ্ধৃত হচ্ছে:</strong><br/>' +
       (top.map(([d, n]) => `${esc(d)} (${n})`).join(', ') || 'কোনোটা নয়') +
       '</p><p style="font-size:12px;color:#94a3b8;">প্রতি মাসের ১ তারিখে Claude (web search) দিয়ে স্বয়ংক্রিয় পরীক্ষা। ' +
       'এই সাইটগুলোতে Inochi-র উল্লেখ বা লেখা পৌঁছাতে পারলে স্কোর বাড়বে।</p>';

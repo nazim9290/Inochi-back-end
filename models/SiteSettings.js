@@ -134,6 +134,11 @@ const SiteSettings = sequelize.define(
     //     ⭐-এর জন্য। rating + count দুটোই > 0 হলে schema fire।
     googleRating: { type: DataTypes.FLOAT, defaultValue: 0 },
     googleReviewCount: { type: DataTypes.INTEGER, defaultValue: 0 },
+    // EN: "Write a review" link from Google Business Profile. Used in the
+    //     review-request email sent when a success story is published.
+    // BN: Google Business Profile-এর "রিভিউ লিখুন" লিংক। Success story publish
+    //     হলে ছাত্রকে যে রিভিউ-অনুরোধ ইমেইল যায়, তাতে এটা থাকে।
+    googleReviewUrl: { type: DataTypes.STRING(500), defaultValue: '' },
 
     // SEO / meta — admin-overridable defaults that show in browser tab,
     // search results, and social share cards. Empty fields fall back to

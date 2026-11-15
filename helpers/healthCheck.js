@@ -131,6 +131,25 @@ async function collectIssues({ siteAudit = new Date().getDay() === 1 } = {}) {
           'আর নিচে কোন page-এ ভেঙেছে। ডেভেলপারকে এই ইমেলটা পাঠালেই হবে।',
       });
     }
+
+    // 4) Mondays: guides whose facts are overdue for a refresh (GEO freshness).
+    try {
+      const { staleGuides, readGuides } = require('./staleGuides');
+      const stale = staleGuides(readGuides());
+      if (stale.length) {
+        issues.push({
+          title: `${stale.length}টা guide-এর তথ্য হালনাগাদ করার সময় হয়েছে`,
+          detail:
+            stale
+              .map((g) => `• /guides/${esc(g.slug)}: শেষ হালনাগাদ ${esc(g.updated)} (${g.ageDays} দিন আগে)`)
+              .join('<br/>') +
+            '<br/>AI সার্চ নতুন তথ্যের পাতা বেশি উদ্ধৃত করে। ফি, তারিখ, পরিসংখ্যান মিলিয়ে ' +
+            'guide-এর "updated" তারিখ বদলাতে ডেভেলপারকে (বা Claude-কে) এই ইমেলটা দিন।',
+        });
+      }
+    } catch (err) {
+      issues.push({ title: 'Guide-এর তারিখ পরীক্ষা চালানো যায়নি', detail: esc(err.message) });
+    }
   }
 
   return issues;

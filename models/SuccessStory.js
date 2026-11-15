@@ -43,10 +43,18 @@ const SuccessStory = sequelize.define(
       type: DataTypes.JSONB,
       defaultValue: {},
     },
+    // EN: Private. If set, the student gets ONE Google-review request email
+    //     when the story is published (helpers/reviewRequest.js). Never sent
+    //     to the public site: hidden by the default scope below.
+    // BN: গোপন। থাকলে story publish হলে ছাত্রকে একবার Google রিভিউর অনুরোধ
+    //     ইমেইল যায়। Public site-এ কখনো যায় না: নিচের default scope লুকায়।
+    studentEmail: { type: DataTypes.STRING(200), defaultValue: '' },
+    reviewRequestedAt: { type: DataTypes.DATE, allowNull: true },
   },
   {
     tableName: 'success_stories',
     timestamps: true,
+    defaultScope: { attributes: { exclude: ['studentEmail'] } },
   }
 );
 

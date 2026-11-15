@@ -23,6 +23,7 @@ const SiteSettings = require('./SiteSettings');
 const HowItWorksStep = require('./HowItWorksStep');
 const JlptCourse = require('./JlptCourse');
 const SuccessStory = require('./SuccessStory');
+const StudentReport = require('./StudentReport');
 const Faq = require('./Faq');
 const Branch = require('./Branch');
 const BdCity = require('./BdCity');
@@ -171,6 +172,7 @@ module.exports = {
   HowItWorksStep,
   JlptCourse,
   SuccessStory,
+  StudentReport,
   Faq,
   Branch,
   BdCity,

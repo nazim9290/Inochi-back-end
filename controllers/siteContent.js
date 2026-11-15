@@ -202,9 +202,36 @@ const storyHeadline = (story) => {
   return tail ? `${story.studentName} — ${tail}` : String(story.studentName || '');
 };
 
+// EN: studentEmail is write-only from the admin form: blank means "keep the
+//     saved one", anything else must look like an email. Returns an error
+//     string or null. After save, ask for one Google review (fire-and-forget).
+// BN: studentEmail admin form থেকে শুধু লেখা যায়: ফাঁকা মানে "আগেরটা থাক",
+//     অন্য কিছু হলে ইমেইলের মতো হতে হবে। ভুল হলে error string, নইলে null।
+//     সেভের পর একবার Google রিভিউর অনুরোধ (fire-and-forget)।
+const cleanStudentEmail = (body) => {
+  if (!('studentEmail' in body)) return null;
+  const v = String(body.studentEmail || '').trim();
+  if (!v) {
+    delete body.studentEmail;
+    return null;
+  }
+  if (!require('../helpers/reviewRequest').EMAIL_RE.test(v)) return 'Invalid student email';
+  body.studentEmail = v;
+  return null;
+};
+const askForReview = (id) =>
+  require('../helpers/reviewRequest')
+    .maybeRequestReview(id)
+    .then((r) => r.sent && console.log('[review] request sent for story', id))
+    .catch((err) => console.error('[review] request failed:', err.message));
+
 exports.createStory = async (req, res) => {
   try {
-    const story = await SuccessStory.create(req.body);
+    const body = { ...(req.body || {}) };
+    delete body.reviewRequestedAt;
+    const bad = cleanStudentEmail(body);
+    if (bad) return res.status(400).json({ error: bad });
+    const story = await SuccessStory.create(body);
     // EN: Fire-and-forget FB auto-post — new success stories are the page's
     //     best organic content.
     // BN: Fire-and-forget FB auto-post — নতুন success story page-এর সেরা
@@ -220,6 +247,7 @@ exports.createStory = async (req, res) => {
         .then((r) => console.log('[fb-auto] story:', r.ok ? r.postId : `skipped (${r.reason})`))
         .catch(() => {});
     }
+    askForReview(story.id);
     res.status(201).json({ message: 'Story created', story });
   } catch (err) {
     console.error('Error creating story:', err);
@@ -270,7 +298,12 @@ exports.updateStory = async (req, res) => {
   try {
     const story = await SuccessStory.findByPk(req.params.id);
     if (!story) return res.status(404).json({ error: 'Story not found' });
-    await story.update(req.body);
+    const body = { ...(req.body || {}) };
+    delete body.reviewRequestedAt;
+    const bad = cleanStudentEmail(body);
+    if (bad) return res.status(400).json({ error: bad });
+    await story.update(body);
+    askForReview(story.id);
     res.json({ message: 'Story updated', story });
   } catch (err) {
     console.error('Error updating story:', err);
