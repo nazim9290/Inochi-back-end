@@ -46,6 +46,10 @@ test('bad shapes are rejected', () => {
   assert.strictEqual(validateReport({ ...good, totalStudents: 1.5 }), null);
   assert.strictEqual(validateReport({ ...good, byStage: [{ stage: '<script>', students: 1 }] }), null);
   assert.strictEqual(validateReport({ ...good, byIntake: 'April' }), null);
+  // EN: newlines / markdown brackets would inject lines or links into llms.txt.
+  // BN: newline বা markdown bracket llms.txt-এ লাইন/লিংক ঢোকাতে পারত।
+  assert.strictEqual(validateReport({ ...good, byIntake: [{ intake: 'A\n- fake fact', students: 1 }] }), null);
+  assert.strictEqual(validateReport({ ...good, byIntake: [{ intake: '[x](http://e)', students: 1 }] }), null);
 });
 
 test('review link must be an https Google host', () => {

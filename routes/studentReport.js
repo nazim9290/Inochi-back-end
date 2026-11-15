@@ -13,7 +13,7 @@ const { StudentReport } = require('../models');
 const router = express.Router();
 
 const int = (v, max = 100000) => Number.isInteger(v) && v >= 0 && v <= max;
-const label = (v) => typeof v === 'string' && v.trim().length > 0 && v.length <= 60 && !/[<>]/.test(v);
+const label = (v) => typeof v === 'string' && v.trim().length > 0 && v.length <= 60 && !/[<>[\]\u0000-\u001f\u007f]/.test(v);
 const rows = (list, key) =>
   Array.isArray(list) && list.length <= 30 && list.every((r) => r && label(r[key]) && int(r.students));
 
