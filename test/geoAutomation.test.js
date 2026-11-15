@@ -47,3 +47,14 @@ test('bad shapes are rejected', () => {
   assert.strictEqual(validateReport({ ...good, byStage: [{ stage: '<script>', students: 1 }] }), null);
   assert.strictEqual(validateReport({ ...good, byIntake: 'April' }), null);
 });
+
+test('review link must be an https Google host', () => {
+  const { isGoogleReviewUrl } = require('../helpers/reviewRequest');
+  assert.strictEqual(isGoogleReviewUrl('https://g.page/r/CabcXYZ/review'), true);
+  assert.strictEqual(isGoogleReviewUrl('https://search.google.com/local/writereview?placeid=x'), true);
+  assert.strictEqual(isGoogleReviewUrl('https://maps.app.goo.gl/abc'), true);
+  assert.strictEqual(isGoogleReviewUrl('http://g.page/r/x'), false);
+  assert.strictEqual(isGoogleReviewUrl('https://g.page.evil.com/x'), false);
+  assert.strictEqual(isGoogleReviewUrl('https://evilgoogle.com/x'), false);
+  assert.strictEqual(isGoogleReviewUrl('javascript:alert(1)'), false);
+});

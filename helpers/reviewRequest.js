@@ -13,6 +13,17 @@
 
 const EMAIL_RE = /^[^\s@<>"']+@[^\s@<>"']+\.[a-z]{2,}$/i;
 
+// EN: Only real Google review links go into a student email (no phishing via a bad setting).
+// BN: ছাত্রের ইমেইলে শুধু আসল Google রিভিউ লিংক যায় (ভুল সেটিং দিয়ে phishing নয়)।
+const isGoogleReviewUrl = (u) => {
+  try {
+    const { protocol, hostname } = new URL(u);
+    return protocol === 'https:' && /(^|\.)(google\.com|g\.page|goo\.gl)$/i.test(hostname);
+  } catch {
+    return false;
+  }
+};
+
 const esc = (s) =>
   String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -24,7 +35,7 @@ async function maybeRequestReview(storyId) {
   if (!EMAIL_RE.test(to)) return { sent: false, reason: 'no valid email' };
   const settings = await SiteSettings.findOne();
   const url = String(settings?.googleReviewUrl || '').trim();
-  if (!/^https:\/\//.test(url)) return { sent: false, reason: 'googleReviewUrl not set' };
+  if (!isGoogleReviewUrl(url)) return { sent: false, reason: 'googleReviewUrl not set or not a Google link' };
 
   const mailer = require('./mailer');
   const name = esc(story.studentName);
@@ -46,4 +57,4 @@ async function maybeRequestReview(storyId) {
   return { sent: true };
 }
 
-module.exports = { maybeRequestReview, EMAIL_RE };
+module.exports = { maybeRequestReview, EMAIL_RE, isGoogleReviewUrl };
