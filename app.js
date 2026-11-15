@@ -251,6 +251,9 @@ app.use((err, req, res, _next) => {
       // BN: দৈনিক health check — কিছু ভাঙলে তবেই admin-কে ইমেল (মরা FB token,
       //     ব্যর্থ AI blog run)। helpers/healthCheck.js দেখুন।
       require('./helpers/healthCheck').startHealthCheck();
+      // EN: Monthly GEO report: does AI search name/cite Inochi? helpers/aiVisibility.js
+      // BN: মাসিক GEO রিপোর্ট: AI search-এ Inochi-র নাম/লিংক আসে কি না।
+      require('./helpers/aiVisibility').startAiVisibility();
     } catch (e) {
       console.error('[ai-blog] scheduler boot failed:', e?.message || e);
     }
