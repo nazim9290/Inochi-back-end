@@ -139,11 +139,12 @@ async function runAiVisibility({ email = true } = {}) {
   fs.appendFileSync(HISTORY, JSON.stringify(run) + '\n');
 
   if (email) {
-    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    const esc = (s) =>
+      String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
     const mark = (r) => (r.error ? '⚠️ ত্রুটি' : r.cited ? '✅ লিংকসহ' : r.mentioned ? '🟡 শুধু নাম' : '❌ নেই');
     const html =
       `<p style="margin-top:0">AI-এর উত্তরে Inochi এসেছে <strong>${score}/${rows.length}</strong> প্রশ্নে` +
-      (prev ? ` (গত বার ${prev.score}/${prev.total}, ${prev.date})` : '') +
+      (prev ? ` (গত বার ${esc(prev.score)}/${esc(prev.total)}, ${esc(prev.date)})` : '') +
       '।</p><table style="border-collapse:collapse;font-size:13px">' +
       rows.map((r) => `<tr><td style="padding:3px 8px">${mark(r)}</td><td style="padding:3px 8px">${esc(r.q)}</td></tr>`).join('') +
       '</table><p><strong>Inochi-র বদলে যেসব সাইট উদ্ধৃত হচ্ছে:</strong><br/>' +
