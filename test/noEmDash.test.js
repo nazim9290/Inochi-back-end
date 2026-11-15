@@ -46,6 +46,11 @@ test('deep version cleans nested JSON and leaves other values', () => {
   });
 });
 
+test('deep version keeps Date objects (else the DB gets "Invalid date")', () => {
+  const at = new Date();
+  assert.strictEqual(removeEmDashDeep({ aiGeneratedAt: at }).aiGeneratedAt, at);
+});
+
 test('admin saves of public content lose their em dashes (model hooks)', async () => {
   const { Faq, Contact } = require('../models');
   const faq = Faq.build({ answer: 'Yes — we help.', answerEn: 'Yes — we help.' });

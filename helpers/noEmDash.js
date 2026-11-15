@@ -65,7 +65,10 @@ const TITLE_FIELD =
 function removeEmDashDeep(value, field = '') {
   if (typeof value === 'string') return removeEmDash(value, { titleLike: TITLE_FIELD.test(field) });
   if (Array.isArray(value)) return value.map((v) => removeEmDashDeep(v, field));
-  if (value && typeof value === 'object') {
+  // EN: Plain objects only: a Date (or Buffer) rebuilt as {} saves as "Invalid date".
+  // BN: শুধু plain object: Date (বা Buffer) {} হয়ে গেলে "Invalid date" save হয়।
+  const proto = value && typeof value === 'object' && Object.getPrototypeOf(value);
+  if (proto === Object.prototype || proto === null) {
     const o = {};
     for (const [k, v] of Object.entries(value)) o[k] = removeEmDashDeep(v, k);
     return o;
