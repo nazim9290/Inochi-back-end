@@ -65,14 +65,23 @@ function scoreAnswer(content = []) {
     .filter((b) => b.type === 'text')
     .map((b) => b.text)
     .join('');
-  const cited = new Set();
+  // EN: web_search_20260209 (dynamic filtering) usually puts sources as plain
+  //     URLs in the text instead of citation objects, so read both.
+  // BN: web_search_20260209 সাধারণত citation না দিয়ে লেখার ভেতরেই URL দেয়, তাই দুটোই পড়া।
+  const cited = new Set((text.match(/https?:\/\/[^\s)\]>"'*]+/g) || []).map(hostOf));
+  const seen = new Set();
   for (const b of content) {
     if (b.type === 'text') for (const c of b.citations || []) cited.add(hostOf(c.url));
+    if (b.type === 'web_search_tool_result' && Array.isArray(b.content))
+      for (const r of b.content) seen.add(hostOf(r.url));
   }
   cited.delete('');
   return {
     mentioned: /inochi|ইনোচি|イノチ/i.test(text),
     cited: cited.has(OUR_DOMAIN),
+    // EN: our site came up in the search results but the answer left it out.
+    // BN: সার্চ ফলাফলে আমাদের সাইট এসেছিল, কিন্তু উত্তরে বাদ পড়েছে।
+    seen: seen.has(OUR_DOMAIN),
     domains: [...cited],
   };
 }
@@ -129,7 +138,7 @@ async function runAiVisibility({ email = true } = {}) {
     try {
       rows.push({ q, ...(await ask(q)) });
     } catch (err) {
-      rows.push({ q, error: err.message, mentioned: false, cited: false, domains: [] });
+      rows.push({ q, error: err.message, mentioned: false, cited: false, seen: false, domains: [] });
     }
   }
   const score = rows.filter((r) => r.mentioned || r.cited).length;
@@ -147,11 +156,12 @@ async function runAiVisibility({ email = true } = {}) {
   if (email) {
     const esc = (s) =>
       String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-    const mark = (r) => (r.error ? '⚠️ ত্রুটি' : r.cited ? '✅ লিংকসহ' : r.mentioned ? '🟡 শুধু নাম' : '❌ নেই');
+    const mark = (r) => (r.error ? '⚠️ ত্রুটি' : r.cited ? '✅ লিংকসহ' : r.mentioned ? '🟡 শুধু নাম' : r.seen ? '👀 সার্চে এসেছিল, উত্তরে নেই' : '❌ নেই');
     const html =
       `<p style="margin-top:0">AI-এর উত্তরে Inochi এসেছে <strong>${score}/${rows.length}</strong> প্রশ্নে` +
       (prev ? ` (গত বার ${esc(prev.score)}/${esc(prev.total)}, ${esc(prev.date)})` : '') +
-      '।</p><table style="border-collapse:collapse;font-size:13px">' +
+      `। আরও ${rows.filter((r) => r.seen && !r.mentioned && !r.cited).length}টা প্রশ্নে সাইট সার্চে এসেছিল কিন্তু উত্তরে বাদ পড়েছে।</p>` +
+      '<table style="border-collapse:collapse;font-size:13px">' +
       rows.map((r) => `<tr><td style="padding:3px 8px">${mark(r)}</td><td style="padding:3px 8px">${esc(r.q)}</td></tr>`).join('') +
       '</table><p><strong>Inochi-র বদলে যেসব সাইট উদ্ধৃত হচ্ছে:</strong><br/>' +
       (top.map(([d, n]) => `${esc(d)} (${n})`).join(', ') || 'কোনোটা নয়') +
