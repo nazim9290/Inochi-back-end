@@ -98,6 +98,11 @@ async function ask(question) {
           // BN: user_location নেই: API "BD" country নেয় না (400); প্রশ্নেই বাংলাদেশ লেখা।
         },
       ],
+      // EN: Mimic an AI search assistant; without this, low effort answers from memory and never searches.
+      // BN: AI search assistant-এর মতো আচরণ; এটা ছাড়া low effort-এ সার্চই করে না।
+      system:
+        'You are a search assistant. Search the web before answering and base the answer on what you find. ' +
+        'When the user asks which organisation or service to use, name the specific options you found.',
       messages: [{ role: 'user', content: question }],
     }),
     signal: AbortSignal.timeout(180 * 1000),
