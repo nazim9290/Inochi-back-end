@@ -1,13 +1,13 @@
 /**
  * EN: Monthly AI-answer visibility check (GEO measurement). Asks Claude, with
- *     live web search from a Dhaka location, the questions real Bangladeshi
+ *     live web search, the questions real Bangladeshi
  *     students ask about going to Japan, then records whether the answer
  *     names Inochi and whether inochieducation.com is cited. Emails the admin
  *     a Bangla report with the score, last month's score and the sites that
  *     ARE being cited instead. History: logs/ai-visibility.jsonl.
  *     Manual run: node -e "require('dotenv').config();require('./helpers/aiVisibility').runAiVisibility().then(r=>console.log(r.score))"
  * BN: মাসিক AI-উত্তরে উপস্থিতি পরীক্ষা (GEO মাপা)। বাংলাদেশি ছাত্ররা জাপান
- *     নিয়ে যে প্রশ্ন করে, সেগুলো Claude-কে (ঢাকা লোকেশন থেকে live web search
+ *     নিয়ে যে প্রশ্ন করে, সেগুলো Claude-কে (live web search
  *     সহ) জিজ্ঞেস করে দেখে উত্তরে Inochi-র নাম আছে কি না, আর
  *     inochieducation.com উদ্ধৃত হয়েছে কি না। Admin-কে বাংলায় রিপোর্ট পাঠায়:
  *     স্কোর, গত মাসের স্কোর, আর Inochi-র বদলে কোন সাইট উদ্ধৃত হচ্ছে।
@@ -94,7 +94,8 @@ async function ask(question) {
           type: 'web_search_20260209',
           name: 'web_search',
           max_uses: 3,
-          user_location: { type: 'approximate', city: 'Dhaka', country: 'BD', timezone: 'Asia/Dhaka' },
+          // EN: No user_location: the API rejects country "BD" (400); the questions name Bangladesh.
+          // BN: user_location নেই: API "BD" country নেয় না (400); প্রশ্নেই বাংলাদেশ লেখা।
         },
       ],
       messages: [{ role: 'user', content: question }],
@@ -149,7 +150,7 @@ async function runAiVisibility({ email = true } = {}) {
       rows.map((r) => `<tr><td style="padding:3px 8px">${mark(r)}</td><td style="padding:3px 8px">${esc(r.q)}</td></tr>`).join('') +
       '</table><p><strong>Inochi-র বদলে যেসব সাইট উদ্ধৃত হচ্ছে:</strong><br/>' +
       (top.map(([d, n]) => `${esc(d)} (${n})`).join(', ') || 'কোনোটা নয়') +
-      '</p><p style="font-size:12px;color:#94a3b8;">প্রতি মাসের ১ তারিখে Claude (ঢাকা থেকে web search) দিয়ে স্বয়ংক্রিয় পরীক্ষা। ' +
+      '</p><p style="font-size:12px;color:#94a3b8;">প্রতি মাসের ১ তারিখে Claude (web search) দিয়ে স্বয়ংক্রিয় পরীক্ষা। ' +
       'এই সাইটগুলোতে Inochi-র উল্লেখ বা লেখা পৌঁছাতে পারলে স্কোর বাড়বে।</p>';
     await require('./mailer').sendAdminAlert({
       subject: `[Inochi সাইট] AI-উত্তরে উপস্থিতি: ${score}/${rows.length}`,
