@@ -9,6 +9,7 @@
 
 const express = require('express');
 const router = express.Router();
+router.param('id', require('../middleware/uuidParam'));
 
 const { requireAuth } = require('../middleware/auth');
 const { checkAdmin } = require('../middleware/admin');

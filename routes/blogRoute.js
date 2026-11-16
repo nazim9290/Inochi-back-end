@@ -5,6 +5,7 @@ const { checkAdmin } = require("../middleware/admin");
 const express = require("express")
 const indexnow = require("../helpers/indexnow");
 const router = express.Router();
+router.param('id', require('../middleware/uuidParam'));
 
 // EN: IndexNow ping for blog publish/update/delete — re-crawls the post URL
 //     + the blog index across all locales. Fire-and-forget; never blocks.
