@@ -319,7 +319,11 @@ exports.userRole = async (req, res) => {
 
 exports.uploadImage = async (req, res) => {
   try {
-    const result = await cloudinary.uploader.upload(req.files.image.path);
+    if (!req.files?.image?.path) return res.status(400).json({ error: 'Image file required' });
+    // EN: Raster images only: an SVG can carry a script. BN: শুধু raster ছবি: SVG-তে script থাকতে পারে।
+    const result = await cloudinary.uploader.upload(req.files.image.path, {
+      allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'],
+    });
     res.json({ url: result.secure_url, public_id: result.public_id });
   } catch (err) {
     console.error('Cloudinary upload error:', err);
